@@ -10,8 +10,8 @@ android {
         applicationId = "dev.sadat.androide"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "2.2.0"
+        versionCode = 5
+        versionName = "2.2.1"
     }
     buildTypes {
         release {
@@ -24,7 +24,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { viewBinding = true }
+    buildFeatures { viewBinding = false }
 }
 
 dependencies {
@@ -36,8 +36,6 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("org.json:json:20240303")
-    implementation("androidx.security:security-crypto:1.1.0-alpha06")
     implementation("androidx.preference:preference-ktx:1.2.1")
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
 }

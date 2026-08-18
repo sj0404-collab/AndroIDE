@@ -20,7 +20,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.tabs.TabLayout
 import dev.sadat.androide.AndroApp
 import dev.sadat.androide.R
 import dev.sadat.androide.agent.AgentEngine

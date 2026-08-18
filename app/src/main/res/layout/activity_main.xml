@@ -13,8 +13,18 @@
         android:background="@color/panel"
         app:title="AndroIDE"
         app:titleTextColor="@color/accent"
-        app:subtitle="GitHub · Dev · AI · Preview · Settings · Logs"
+        app:subtitle="6 tabs"
         app:subtitleTextColor="@color/muted" />
+
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tabs"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/panel"
+        app:tabMode="scrollable"
+        app:tabTextColor="@color/muted"
+        app:tabSelectedTextColor="@color/accent"
+        app:tabIndicatorColor="@color/accent" />
 
     <TextView
         android:id="@+id/globalInd"
@@ -31,14 +41,4 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1" />
-
-    <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:id="@+id/nav"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/panel"
-        app:labelVisibilityMode="labeled"
-        app:itemIconTint="@color/accent"
-        app:itemTextColor="@color/text"
-        app:menu="@menu/nav" />
 </LinearLayout>

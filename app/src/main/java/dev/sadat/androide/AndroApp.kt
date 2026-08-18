@@ -16,6 +16,11 @@ class AndroApp : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        Thread.setDefaultUncaughtExceptionHandler { _, e ->
+            try {
+                getFileStreamPath("crash.txt").writeText(e.stackTraceToString())
+            } catch (_: Exception) { }
+        }
         keys = KeyStore(this)
         workspace = Workspace(this)
         sessions = SessionStore(this)
