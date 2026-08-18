@@ -89,9 +89,52 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.fabSet).setOnClickListener { openSheet("Settings") { showSettings() } }
         findViewById<View>(R.id.fabLog).setOnClickListener { openSheet("Logs") { showLogs() } }
 
+        bindSessions()
         bindChat()
         handler.post(clock)
         setStatus("готов", "#2DD4BF")
+    }
+
+    private fun bindSessions() {
+        val sess = AndroApp.instance.sessions
+        val spin = findViewById<Spinner>(R.id.sessSpin)
+        val snap = findViewById<Spinner>(R.id.snapSpin)
+        fun fill() {
+            val list = sess.list()
+            spin.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, list.map { "${it.id} ${it.title}" })
+            val i = list.indexOfFirst { it.id == sess.current.id }
+            if (i >= 0) spin.setSelection(i)
+            val snaps = AndroApp.instance.snaps.list()
+            snap.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, snaps.map { it.label })
+        }
+        fill()
+        findViewById<View>(R.id.btnSessNew).setOnClickListener {
+            sess.save()
+            sess.create("New session", AndroApp.instance.workspace.currentProject.name)
+            fill(); bindChat(); toast("new session")
+        }
+        findViewById<View>(R.id.btnSessDel).setOnClickListener {
+            sess.delete(sess.current.id)
+            fill(); bindChat(); toast("cleared")
+        }
+        findViewById<View>(R.id.btnSnapBack).setOnClickListener {
+            val snaps = AndroApp.instance.snaps.list()
+            val i = snap.selectedItemPosition
+            if (i in snaps.indices) {
+                AndroApp.instance.snaps.restore(snaps[i].id)
+                toast("rollback ${snaps[i].label}")
+                setStatus("откат", "#F5D76E")
+            }
+        }
+        spin.setOnItemSelectedListener(simple {
+            val list = sess.list()
+            val i = spin.selectedItemPosition
+            if (i in list.indices && list[i].id != sess.current.id) {
+                sess.save()
+                sess.switchTo(list[i].id)
+                bindChat()
+            }
+        })
     }
 
     override fun onDestroy() {
@@ -178,29 +221,27 @@ class MainActivity : AppCompatActivity() {
                         agent.runAutonomous(text) { ev ->
                             runOnUiThread {
                                 when (ev.kind) {
-                                    "stream" -> {
-                                        if (streamBubble == null) {
-                                            val b = bubble(box, "AI", "")
-                                            streamBubble = b.findViewById(R.id.body)
-                                        }
-                                        streamBubble?.append(ev.text)
-                                        tokens += ev.text.length / 4
-                                    }
-                                    "think" -> bubble(box, "THINK", "", ev.text)
-                                    "write", "term", "pty", "github", "read", "delete", "move", "web", "art" -> {
-                                        instr += 1
-                                        findViewById<TextView>(R.id.instrLabel).text = "инстр. $instr"
-                                    }
-                                    "round" -> findViewById<TextView>(R.id.roundLabel).text =
-                                        ev.text.replace("round ", "раунд ")
-                                    else -> { }
+                                    "say" -> bubble(box, "AI", ev.text)
+                                    "think" -> addTool(box, "💭", ev.text)
+                                    "write" -> addTool(box, "✎", ev.text)
+                                    "read" -> addTool(box, "▣", ev.text)
+                                    "term" -> addTool(box, ">_", ev.text)
+                                    "todo" -> addTool(box, "☑", ev.text.replace("\n", " · "))
+                                    "snap" -> addTool(box, "●", ev.text)
+                                    "github", "pty" -> addTool(box, "⌥", ev.text.take(90))
+                                    "web", "art", "plugin", "delete", "move" -> addTool(box, "·", ev.text)
+                                    "round" -> findViewById<TextView>(R.id.roundLabel).text = ev.text
+                                    "status" -> setStatus(ev.text, "#E11D48")
+                                }
+                                if (ev.kind in setOf("write", "term", "read", "github", "pty", "web", "todo", "snap")) {
+                                    instr += 1
+                                    findViewById<TextView>(R.id.instrLabel).text = "инстр. $instr"
                                 }
                                 findViewById<TextView>(R.id.tokLabel).text = "токены $tokens"
                                 findViewById<TextView>(R.id.timeLabel).text =
                                     "${((System.currentTimeMillis() - t0) / 1000)}с"
                                 if (ev.kind == "think") setStatus("думает", "#C9A227")
-                                else if (ev.kind == "stream") setStatus("пишет", "#2DD4BF")
-                                else setStatus(ev.kind, "#8B8B97")
+                                else if (ev.kind != "status") setStatus(ev.kind, "#2DD4BF")
                                 scroll.post { scroll.fullScroll(View.FOCUS_DOWN) }
                             }
                         }
@@ -299,6 +340,24 @@ class MainActivity : AppCompatActivity() {
                 val run = gh.latestRun("pty")
                 d + "\n" + (if (run != null) gh.runLogs(run.getLong("id")) else "waiting")
             }
+        }
+        v.findViewById<View>(R.id.btnRunnerTest).setOnClickListener {
+            go { gh.dispatchWorkflow("runner-test.yml", mapOf("suite" to "uname -a && node -v")) }
+        }
+        v.findViewById<View>(R.id.btnRunnerFetch).setOnClickListener {
+            val u = v.findViewById<EditText>(R.id.fetchUrl).text.toString()
+            go { gh.dispatchWorkflow("runner-fetch.yml", mapOf("url" to u, "name" to "file.bin")) }
+        }
+        v.findViewById<View>(R.id.btnRunnerSsh).setOnClickListener {
+            go {
+                val d = gh.dispatchWorkflow("runner-ssh.yml", mapOf("note" to "androide"))
+                Thread.sleep(8000)
+                val run = gh.latestRun("ssh")
+                d + "\n" + (if (run != null) gh.runLogs(run.getLong("id")) else "open Actions → tmate SSH line")
+            }
+        }
+        v.findViewById<View>(R.id.btnRunnerRdp).setOnClickListener {
+            go { gh.dispatchWorkflow("runner-rdp.yml") + "\nHosted Windows has no public RDP. Use tmate SSH or a self-hosted runner." }
         }
         v.findViewById<View>(R.id.btnCreateRepo).setOnClickListener {
             go {

@@ -77,6 +77,21 @@
             android:textSize="14sp"
             android:textStyle="bold" />
 
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="8dp">
+            <LinearLayout android:orientation="horizontal" android:layout_width="wrap_content" android:layout_height="wrap_content">
+                <Spinner android:id="@+id/sessSpin" android:layout_width="180dp" android:layout_height="40dp" android:background="@drawable/bg_chip" />
+                <Button android:id="@+id/btnSessNew" android:layout_width="wrap_content" android:layout_height="40dp" android:text="New" android:textSize="12sp" android:layout_marginStart="6dp" />
+                <Button android:id="@+id/btnSessDel" android:layout_width="wrap_content" android:layout_height="40dp" android:text="Clear" android:textSize="12sp" />
+                <Spinner android:id="@+id/snapSpin" android:layout_width="160dp" android:layout_height="40dp" android:background="@drawable/bg_chip" android:layout_marginStart="6dp" />
+                <Button android:id="@+id/btnSnapBack" android:layout_width="wrap_content" android:layout_height="40dp" android:text="Undo" android:textSize="12sp" />
+            </LinearLayout>
+        </HorizontalScrollView>
+
         <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#222228" />
 
         <ScrollView

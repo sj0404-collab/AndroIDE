@@ -131,6 +131,10 @@ Do not stop after one file. Implement, run bash, read output, fix, update todo.
             s.messages.add(ChatMessage("assistant", text, result.reasoning, visible = speech.isNotBlank(), kind = "assistant"))
             if (speech.isNotBlank()) onEvent(AgentEvent("say", speech))
             val applied = applyActions(text, onEvent)
+            try {
+                AndroApp.instance.snaps.take("round ${s.rounds}")
+                onEvent(AgentEvent("snap", "autosave #${s.rounds}"))
+            } catch (_: Exception) { }
             sessions.save(s)
             all.append(applied)
             if (stop.get() || text.contains("```halt")) {

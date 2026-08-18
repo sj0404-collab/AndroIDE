@@ -3,6 +3,7 @@ package dev.sadat.androide
 import android.app.Application
 import dev.sadat.androide.session.SessionStore
 import dev.sadat.androide.workspace.KeyStore
+import dev.sadat.androide.workspace.SnapshotStore
 import dev.sadat.androide.workspace.Workspace
 
 class AndroApp : Application() {
@@ -11,6 +12,8 @@ class AndroApp : Application() {
     lateinit var workspace: Workspace
         private set
     lateinit var sessions: SessionStore
+        private set
+    lateinit var snaps: SnapshotStore
         private set
 
     override fun onCreate() {
@@ -24,6 +27,7 @@ class AndroApp : Application() {
         keys = KeyStore(this)
         workspace = Workspace(this)
         sessions = SessionStore(this)
+        snaps = SnapshotStore(workspace, filesDir)
     }
 
     companion object {

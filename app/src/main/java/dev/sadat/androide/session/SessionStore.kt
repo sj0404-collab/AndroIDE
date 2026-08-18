@@ -35,6 +35,13 @@ class SessionStore(ctx: Context) {
         current = s
     }
 
+    fun delete(id: String) {
+        File(dir, "$id.json").delete()
+        if (current.id == id) {
+            current = list().firstOrNull() ?: create("New session")
+        }
+    }
+
     fun save(s: Session = current) {
         val arr = JSONArray()
         s.messages.forEach {

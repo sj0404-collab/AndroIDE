@@ -1,7 +1,7 @@
 <resources>
     <style name="FabBtn">
-        <item name="android:layout_width">52dp</item>
-        <item name="android:layout_height">44dp</item>
+        <item name="android:layout_width">58dp</item>
+        <item name="android:layout_height">52dp</item>
         <item name="android:layout_marginBottom">8dp</item>
         <item name="android:gravity">center</item>
         <item name="android:textColor">@color/text</item>

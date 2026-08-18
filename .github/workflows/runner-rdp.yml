@@ -1,0 +1,16 @@
+name: Runner Windows RDP hint
+on:
+  workflow_dispatch:
+
+jobs:
+  rdp:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - name: Info
+        shell: pwsh
+        run: |
+          Write-Host "GitHub-hosted Windows has no public RDP inbound."
+          Write-Host "Use runner-ssh.yml (tmate) for a real interactive shell."
+          Write-Host "For RDP you need a self-hosted Windows runner on your PC."
+          ipconfig

@@ -27,6 +27,11 @@
         <Button android:id="@+id/btnWorkflow" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Dispatch android.yml workflow" />
         <EditText android:id="@+id/ptyCmd" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="PTY command on GitHub runner" android:text="uname -a &amp;&amp; node -v" android:textColor="@color/text" android:textColorHint="@color/muted" />
         <Button android:id="@+id/btnPty" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Start GitHub PTY runner (node-pty / script)" />
+        <Button android:id="@+id/btnRunnerTest" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Runner: tests" />
+        <EditText android:id="@+id/fetchUrl" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="https://… to download on runner" android:textColor="@color/text" android:textColorHint="@color/muted" />
+        <Button android:id="@+id/btnRunnerFetch" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Runner: download URL (artifact)" />
+        <Button android:id="@+id/btnRunnerSsh" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Runner: tmate SSH (real shell)" />
+        <Button android:id="@+id/btnRunnerRdp" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Runner: Windows note (no inbound RDP)" />
 
         <EditText android:id="@+id/ghNewRepo" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="new repo name" android:textColor="@color/text" />
         <Button android:id="@+id/btnCreateRepo" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Create repo on GitHub" />

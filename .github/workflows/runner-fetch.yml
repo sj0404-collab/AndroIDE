@@ -1,0 +1,25 @@
+name: Runner download
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: URL to download
+        required: true
+      name:
+        description: output filename
+        default: download.bin
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Download
+        run: |
+          mkdir -p out
+          curl -L --fail -o "out/${{ inputs.name }}" "${{ inputs.url }}"
+          ls -lh out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fetched
+          path: out/*
