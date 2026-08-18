@@ -1,6 +1,7 @@
 package dev.sadat.androide
 
 import android.app.Application
+import dev.sadat.androide.preset.PresetStore
 import dev.sadat.androide.session.SessionStore
 import dev.sadat.androide.workspace.KeyStore
 import dev.sadat.androide.workspace.SnapshotStore
@@ -15,6 +16,8 @@ class AndroApp : Application() {
         private set
     lateinit var snaps: SnapshotStore
         private set
+    lateinit var presets: PresetStore
+        private set
 
     override fun onCreate() {
         super.onCreate()
@@ -28,6 +31,7 @@ class AndroApp : Application() {
         workspace = Workspace(this)
         sessions = SessionStore(this)
         snaps = SnapshotStore(workspace, filesDir)
+        presets = PresetStore(this)
     }
 
     companion object {

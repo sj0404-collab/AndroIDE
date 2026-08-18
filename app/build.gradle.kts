@@ -10,8 +10,8 @@ android {
         applicationId = "dev.sadat.androide"
         minSdk = 26
         targetSdk = 35
-        versionCode = 10
-        versionName = "2.6.0"
+        versionCode = 11
+        versionName = "2.7.0"
     }
     signingConfigs {
         create("unified") {
@@ -53,4 +53,6 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("androidx.preference:preference-ktx:1.2.1")
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
+    implementation("io.noties.markwon:core:4.6.2")
+    implementation("io.noties.markwon:ext-tables:4.6.2")
 }

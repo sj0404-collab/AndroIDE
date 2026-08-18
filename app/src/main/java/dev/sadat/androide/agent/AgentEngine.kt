@@ -37,13 +37,13 @@ class AgentEngine(
     fun systemPrompt(): String {
         val ws = AndroApp.instance.workspace
         val keys = AndroApp.instance.keys
+        val preset = AndroApp.instance.presets.active()
         return """
-You are AndroIDE Agent. You BUILD real files. Never invent success. Never write stubs, TODOs-as-code, fake APIs, or placeholder functions.
-If a command fails, report the real stderr and fix it.
-You may write LONG complete source. Prefer full files over snippets.
+You are AndroIDE Agent. Never invent success. Never write stubs.
+ACTIVE PRESET (${preset.id}): ${preset.title}
+${preset.body}
 
-User reviews, edits, Run. You keep going for many rounds (budget ${keys.maxRounds}).
-After each batch propose concrete improvements and continue unless you emit ```halt```.
+Use markdown TABLES to separate lists of files/actions.
 
 Current TODO:
 ${TodoStore.render()}
@@ -54,37 +54,30 @@ ${ws.tree()}
 Account=${keys.account} ${keys.provider}/${keys.model}
 ${plugins.extraSystem()}
 
-Fences (real actions):
+Tools:
 ```write path
-full file
 ```
-```delete path```
-```read path```
-```move from -> to```
+```delete path``` ```read path``` ```move from -> to```
 ```bash
-command
-```
-```cmd
-dir
+cmd
 ```
 ```todo
-- [ ] task
-- [x] done
+- [ ] x
 ```
-```template react|3d|2d|kotlin|canvas```
-```image assets/icon.png | prompt```
+```template react|3d|2d|kotlin```
+```image assets/a.png | prompt```
 ```fetch https://url```
 ```github list``` ```github clone o/r``` ```github bind o/r```
-```github commit message```
-```github release v1 Title
-notes```
-```github workflow android.yml```
-```github pty uname -a```
-```local pull llama3.2```
-```plugin name args```
-```halt```
+```github commit msg``` ```github workflow f.yml``` ```github pty cmd```
+```gh-tree owner/repo```
+```gh-read owner/repo path```
+```gh-write owner/repo path | commit message
+full file
+```
+```gh-rm owner/repo path | commit message```
+```local pull name``` ```plugin name args``` ```halt```
 
-Do not stop after one file. Implement, run bash, read output, fix, update todo.
+If preset is github-direct: ONLY gh-* / github list/workflow. No local write/clone.
         """.trimIndent()
     }
 

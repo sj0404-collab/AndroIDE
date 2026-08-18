@@ -23,8 +23,11 @@ import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import io.noties.markwon.Markwon
+import io.noties.markwon.ext.tables.TablePlugin
 import dev.sadat.androide.AndroApp
 import dev.sadat.androide.R
 import dev.sadat.androide.agent.AgentEngine
@@ -45,6 +48,7 @@ import java.io.File
 class MainActivity : AppCompatActivity() {
     private lateinit var content: android.widget.FrameLayout
     private val inflater by lazy { LayoutInflater.from(this) }
+    private val markwon by lazy { Markwon.builder(this).usePlugin(TablePlugin.create(this)).build() }
     private val agent by lazy { AgentEngine(AndroApp.instance.sessions) }
     private val ai = AiClient()
     private val gh by lazy { GitHubClient(AndroApp.instance.workspace) }
@@ -199,7 +203,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun bubble(parent: LinearLayout, who: String, body: String, think: String = "", user: Boolean = false): View {
         val b = inflater.inflate(R.layout.bubble, parent, false)
-        b.findViewById<TextView>(R.id.body).text = body
+        markwon.setMarkdown(b.findViewById(R.id.body), body)
         val t = b.findViewById<TextView>(R.id.think)
         if (think.isNotBlank() && AndroApp.instance.keys.showReasoning) {
             t.visibility = View.VISIBLE
@@ -306,6 +310,49 @@ class MainActivity : AppCompatActivity() {
         }
         v.findViewById<View>(R.id.btnOpenProject).setOnClickListener { ws.openOrCreate(proj.text.toString()); refresh() }
         v.findViewById<View>(R.id.btnRefreshFiles).setOnClickListener { refresh() }
+        v.findViewById<View>(R.id.btnSaveFile).setOnClickListener { ws.write(path.text.toString(), body.text.toString()); refresh() }
+        v.findViewById<View>(R.id.btnMoveFile).setOnClickListener { ws.move(path.text.toString(), dest.text.toString()); refresh() }
+        v.findViewById<View>(R.id.btnCopyFile).setOnClickListener { ws.copy(path.text.toString(), dest.text.toString()); refresh() }
+        v.findViewById<View>(R.id.btnDelFile).setOnClickListener { ws.delete(path.text.toString()); refresh() }
+        show(v)
+    }
+
+    private fun showGithub() {
+        val v = inflater.inflate(R.layout.tab_github, content, false)
+        val token = v.findViewById<EditText>(R.id.ghToken)
+        val log = v.findViewById<TextView>(R.id.ghLog)
+        val who = v.findViewById<TextView>(R.id.ghWho)
+        val repos = v.findViewById<TextView>(R.id.ghRepos)
+        val repo = v.findViewById<EditText>(R.id.ghRepo)
+        token.setText(AndroApp.instance.keys.githubToken)
+        fun go(block: () -> String) {
+            lifecycleScope.launch {
+                try {
+                    log.text = withContext(Dispatchers.IO) { block() }
+                } catch (e: Exception) {
+                    log.text = e.message
+                }
+            }
+        }
+        v.findViewById<View>(R.id.btnSaveToken).setOnClickListener {
+            AndroApp.instance.keys.githubToken = token.text.toString()
+            go {
+                val w = gh.whoami(); runOnUiThread { who.text = w }; w
+            }
+        }
+        v.findViewById<View>(R.id.btnListRepos).setOnClickListener {
+            go {
+                val t = gh.listRepos().joinToString("\n") { it.fullName }
+                runOnUiThread { repos.text = t }
+                t
+            }
+        }
+        v.findViewById<View>(R.id.btnClone).setOnClickListener { go { gh.cloneRepo(repo.text.toString()).absolutePath } }
+        v.findViewById<View>(R.id.btnBind).setOnClickListener { gh.bindRemote(repo.text.toString()); log.text = "bound" }
+        v.findViewById<View>(R.id.btnPush).setOnClickListener {
+            go { gh.commitAndPush(v.findViewById<EditText>(R.id.ghCommitMsg).text.toString()) }
+        }
+        v.fesh() }
         v.findViewById<View>(R.id.btnSaveFile).setOnClickListener { ws.write(path.text.toString(), body.text.toString()); refresh() }
         v.findViewById<View>(R.id.btnMoveFile).setOnClickListener { ws.move(path.text.toString(), dest.text.toString()); refresh() }
         v.findViewById<View>(R.id.btnCopyFile).setOnClickListener { ws.copy(path.text.toString(), dest.text.toString()); refresh() }

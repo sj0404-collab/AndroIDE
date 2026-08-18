@@ -37,7 +37,7 @@ class GitHubClient(private val ws: Workspace) {
             "POST" -> b.post((body ?: "{}").toRequestBody(jsonType))
             "PUT" -> b.put((body ?: "{}").toRequestBody(jsonType))
             "PATCH" -> b.patch((body ?: "{}").toRequestBody(jsonType))
-            "DELETE" -> b.delete()
+            "DELETE" -> b.delete((body ?: "{}").toRequestBody(jsonType))
             else -> b.get()
         }.build()
         val resp = http.newCall(req).execute()
@@ -216,6 +216,52 @@ class GitHubClient(private val ws: Workspace) {
     }
 
     fun apiGet(path: String): String = api(path)
+
+    fun remoteTree(full: String): String {
+        val repo = JSONObject(api("/repos/$full"))
+        val branch = repo.optString("default_branch", "main")
+        val ref = JSONObject(api("/repos/$full/git/ref/heads/$branch"))
+        val sha = ref.getJSONObject("object").getString("sha")
+        val tree = JSONObject(api("/repos/$full/git/trees/$sha?recursive=1"))
+        val items = tree.getJSONArray("tree")
+        val sb = StringBuilder()
+        sb.appendLine("| path | type | size |")
+        sb.appendLine("|---|---|---|")
+        for (i in 0 until items.length()) {
+            val n = items.getJSONObject(i)
+            sb.appendLine("| ${n.optString("path")} | ${n.optString("type")} | ${n.optInt("size")} |")
+        }
+        return sb.toString()
+    }
+
+    fun remoteRead(full: String, path: String): String {
+        val blob = JSONObject(api("/repos/$full/contents/${path.encodeUrl()}"))
+        return if (blob.optString("encoding") == "base64") {
+            String(android.util.Base64.decode(blob.getString("content").replace("\n", ""), android.util.Base64.DEFAULT))
+        } else blob.optString("content")
+    }
+
+    fun remoteWrite(full: String, path: String, content: String, message: String): String {
+        val enc = android.util.Base64.encodeToString(content.toByteArray(Charsets.UTF_8), android.util.Base64.NO_WRAP)
+        val body = JSONObject().put("message", message).put("content", enc)
+        try {
+            val old = JSONObject(api("/repos/$full/contents/${path.encodeUrl()}"))
+            body.put("sha", old.getString("sha"))
+        } catch (_: Exception) { }
+        val o = JSONObject(api("/repos/$full/contents/${path.encodeUrl()}", "PUT", body.toString()))
+        val sha = o.optJSONObject("commit")?.optString("sha") ?: "?"
+        return "committed $path @$sha ($full)"
+    }
+
+    fun remoteDelete(full: String, path: String, message: String): String {
+        val old = JSONObject(api("/repos/$full/contents/${path.encodeUrl()}"))
+        api(
+            "/repos/$full/contents/${path.encodeUrl()}",
+            "DELETE",
+            JSONObject().put("message", message).put("sha", old.getString("sha")).toString()
+        )
+        return "deleted $path on $full"
+    }
 
     private fun String.encodeUrl(): String = java.net.URLEncoder.encode(this, "UTF-8").replace("+", "%20")
 }

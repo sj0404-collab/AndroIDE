@@ -89,6 +89,8 @@
                 <Button android:id="@+id/btnSessDel" android:layout_width="wrap_content" android:layout_height="40dp" android:text="Clear" android:textSize="12sp" />
                 <Spinner android:id="@+id/snapSpin" android:layout_width="160dp" android:layout_height="40dp" android:background="@drawable/bg_chip" android:layout_marginStart="6dp" />
                 <Button android:id="@+id/btnSnapBack" android:layout_width="wrap_content" android:layout_height="40dp" android:text="Undo" android:textSize="12sp" />
+                <Spinner android:id="@+id/presetSpin" android:layout_width="200dp" android:layout_height="40dp" android:background="@drawable/bg_chip" android:layout_marginStart="8dp" />
+                <Button android:id="@+id/btnPresetSave" android:layout_width="wrap_content" android:layout_height="40dp" android:text="Preset" android:textSize="12sp" />
             </LinearLayout>
         </HorizontalScrollView>
 
