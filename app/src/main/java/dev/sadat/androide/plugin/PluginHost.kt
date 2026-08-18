@@ -4,16 +4,6 @@ import dev.sadat.androide.AndroApp
 import org.json.JSONObject
 import java.io.File
 
-/**
- * User plugins are JSON + optional JS-like action maps in filesDir/plugins/*.json
- * {
- *   "id": "my-tool",
- *   "name": "My tool",
- *   "on": "before|after|command",
- *   "command": "mytool",
- *   "appendSystem": "extra rules"
- * }
- */
 data class Plugin(val id: String, val name: String, val on: String, val command: String, val appendSystem: String)
 
 class PluginHost {
@@ -31,7 +21,7 @@ class PluginHost {
         }
     }
 
-    fun run(name: String, args: String): String {
+    fun invokeCommand(name: String, args: String): String {
         val p = list().firstOrNull { it.command.equals(name, true) || it.id.equals(name, true) }
             ?: return "plugin not found: $name"
         val log = File(AndroApp.instance.workspace.pluginsDir, "${p.id}.log")

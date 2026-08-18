@@ -25,7 +25,7 @@ object Templates {
         return "template $kind written"
     }
 
-    private const val REACT = """<!DOCTYPE html>
+    private val REACT = """<!DOCTYPE html>
 <html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>AndroIDE React</title>
 <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -41,7 +41,7 @@ function App(){
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script></body></html>"""
 
-    private const val THREE = """<!DOCTYPE html>
+    private val THREE = """<!DOCTYPE html>
 <html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>3D</title><style>body{margin:0;overflow:hidden;background:#000}#hud{position:fixed;left:8px;top:8px;color:#0ff;font-family:sans-serif}</style>
 <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}</script>
@@ -62,7 +62,7 @@ addEventListener('resize',()=>{c.aspect=innerWidth/innerHeight;c.updateProjectio
 function loop(t){ cube.rotation.y=t/800; r.render(s,c); requestAnimationFrame(loop);} requestAnimationFrame(loop);
 </script></body></html>"""
 
-    private const val PHASER = """<!DOCTYPE html>
+    private val PHASER = """<!DOCTYPE html>
 <html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
 <style>body{margin:0;background:#000}</style></head><body>
@@ -79,7 +79,7 @@ function update(){}
 new Phaser.Game(cfg);
 </script></body></html>"""
 
-    private const val CANVAS = """<!DOCTYPE html><html><body style="margin:0;background:#0b1220">
+    private val CANVAS = """<!DOCTYPE html><html><body style="margin:0;background:#0b1220">
 <canvas id="c"></canvas>
 <script>
 const c=document.getElementById('c'),x=c.getContext('2d');
@@ -90,10 +90,10 @@ function loop(){x.fillStyle='#0b1220';x.fillRect(0,0,c.width,c.height);
 x.fillStyle='#00e5ff';x.fillRect(px-16,py-16,32,32); requestAnimationFrame(loop)} loop();
 </script></body></html>"""
 
-    private const val KOTLIN = """fun main() {
+    private val KOTLIN = """fun main() {
     println("AndroIDE Kotlin prototype")
     val hp = 10
-    repeat(3) { println("tick $it hp=$hp") }
+    repeat(3) { println("tick " + it + " hp=" + hp) }
 }
 """
 }

@@ -162,7 +162,7 @@ Start with a short plan. Reasoning models: think first, then act.
             note("local", msg)
         }
         Regex("```plugin\\s+(\\S+)\\s*([^\\n`]*)").findAll(reply).forEach { m ->
-            note("plugin", plugins.run(m.groupValues[1], m.groupValues[2].trim()))
+            note("plugin", plugins.invokeCommand(m.groupValues[1], m.groupValues[2].trim()))
         }
         return log.toString().trim()
     }
