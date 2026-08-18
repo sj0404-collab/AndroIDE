@@ -1,0 +1,33 @@
+name: Android Release
+on:
+  push:
+    tags: ["v*"]
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - name: Build release APK
+        run: |
+          chmod +x gradlew || true
+          if [ ! -f gradlew ]; then
+            gradle wrapper --gradle-version 8.9 || true
+          fi
+          ./gradlew assembleRelease --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: androide-apk
+          path: app/build/outputs/apk/release/*.apk
+      - name: Upload to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app/build/outputs/apk/release/*.apk

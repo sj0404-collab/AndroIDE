@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/tab_agent" android:title="Agent" android:icon="@android:drawable/ic_menu_edit" />
+    <item android:id="@+id/tab_files" android:title="Files" android:icon="@android:drawable/ic_menu_agenda" />
+    <item android:id="@+id/tab_github" android:title="GitHub" android:icon="@android:drawable/ic_menu_share" />
+    <item android:id="@+id/tab_run" android:title="Run" android:icon="@android:drawable/ic_media_play" />
+    <item android:id="@+id/tab_settings" android:title="Keys" android:icon="@android:drawable/ic_menu_manage" />
+</menu>

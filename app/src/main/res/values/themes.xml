@@ -1,0 +1,9 @@
+<resources>
+    <style name="Theme.AndroIDE" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">#00E5FF</item>
+        <item name="colorSecondary">#FFD54F</item>
+        <item name="android:statusBarColor">#0B1220</item>
+        <item name="android:navigationBarColor">#0B1220</item>
+        <item name="android:windowBackground">#0B1220</item>
+    </style>
+</resources>

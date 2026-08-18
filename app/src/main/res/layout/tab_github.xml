@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="10dp">
+
+        <TextView android:id="@+id/ghWho" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/gold" />
+        <EditText android:id="@+id/ghToken" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="GitHub PAT (repo, workflow)" android:inputType="textPassword" android:textColor="@color/text" android:textColorHint="@color/muted" />
+        <Button android:id="@+id/btnSaveToken" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Save token &amp; whoami" />
+
+        <Button android:id="@+id/btnListRepos" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="List my repositories" />
+        <TextView android:id="@+id/ghRepos" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/text" android:fontFamily="monospace" android:textIsSelectable="true" />
+
+        <EditText android:id="@+id/ghRepo" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="owner/repo" android:textColor="@color/text" android:textColorHint="@color/muted" />
+        <Button android:id="@+id/btnClone" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Clone into workspace" />
+        <Button android:id="@+id/btnBind" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Bind current project to remote" />
+
+        <EditText android:id="@+id/ghCommitMsg" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="commit message" android:text="AndroIDE agent update" android:textColor="@color/text" />
+        <Button android:id="@+id/btnPush" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Commit + push (real Git Data API)" />
+
+        <EditText android:id="@+id/ghTag" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="v2.0.0" android:textColor="@color/text" />
+        <Button android:id="@+id/btnRelease" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Create GitHub Release" />
+        <Button android:id="@+id/btnWorkflow" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Dispatch android.yml workflow" />
+
+        <EditText android:id="@+id/ghNewRepo" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="new repo name" android:textColor="@color/text" />
+        <Button android:id="@+id/btnCreateRepo" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Create repo on GitHub" />
+
+        <TextView android:id="@+id/ghLog" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/muted" android:paddingTop="8dp" />
+    </LinearLayout>
+</ScrollView>

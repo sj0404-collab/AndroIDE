@@ -1,0 +1,15 @@
+.gradle/
+.idea/
+*.iml
+local.properties
+app/build/
+build/
+.cxx/
+*.apk
+*.ap_
+.DS_Store
+legacy/bin/
+
+# secrets
+*.token
+.env
