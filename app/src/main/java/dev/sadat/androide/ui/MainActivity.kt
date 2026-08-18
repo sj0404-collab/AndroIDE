@@ -352,6 +352,48 @@ class MainActivity : AppCompatActivity() {
         v.findViewById<View>(R.id.btnPush).setOnClickListener {
             go { gh.commitAndPush(v.findViewById<EditText>(R.id.ghCommitMsg).text.toString()) }
         }
+        valetOnClickListener { ws.write(path.text.toString(), body.text.toString()); refresh() }
+        v.findViewById<View>(R.id.btnMoveFile).setOnClickListener { ws.move(path.text.toString(), dest.text.toString()); refresh() }
+        v.findViewById<View>(R.id.btnCopyFile).setOnClickListener { ws.copy(path.text.toString(), dest.text.toString()); refresh() }
+        v.findViewById<View>(R.id.btnDelFile).setOnClickListener { ws.delete(path.text.toString()); refresh() }
+        show(v)
+    }
+
+    private fun showGithub() {
+        val v = inflater.inflate(R.layout.tab_github, content, false)
+        val token = v.findViewById<EditText>(R.id.ghToken)
+        val log = v.findViewById<TextView>(R.id.ghLog)
+        val who = v.findViewById<TextView>(R.id.ghWho)
+        val repos = v.findViewById<TextView>(R.id.ghRepos)
+        val repo = v.findViewById<EditText>(R.id.ghRepo)
+        token.setText(AndroApp.instance.keys.githubToken)
+        fun go(block: () -> String) {
+            lifecycleScope.launch {
+                try {
+                    log.text = withContext(Dispatchers.IO) { block() }
+                } catch (e: Exception) {
+                    log.text = e.message
+                }
+            }
+        }
+        v.findViewById<View>(R.id.btnSaveToken).setOnClickListener {
+            AndroApp.instance.keys.githubToken = token.text.toString()
+            go {
+                val w = gh.whoami(); runOnUiThread { who.text = w }; w
+            }
+        }
+        v.findViewById<View>(R.id.btnListRepos).setOnClickListener {
+            go {
+                val t = gh.listRepos().joinToString("\n") { it.fullName }
+                runOnUiThread { repos.text = t }
+                t
+            }
+        }
+        v.findViewById<View>(R.id.btnClone).setOnClickListener { go { gh.cloneRepo(repo.text.toString()).absolutePath } }
+        v.findViewById<View>(R.id.btnBind).setOnClickListener { gh.bindRemote(repo.text.toString()); log.text = "bound" }
+        v.findViewById<View>(R.id.btnPush).setOnClickListener {
+            go { gh.commitAndPush(v.findViewById<EditText>(R.id.ghCommitMsg).text.toString()) }
+        }
         v.fesh() }
         v.findViewById<View>(R.id.btnSaveFile).setOnClickListener { ws.write(path.text.toString(), body.text.toString()); refresh() }
         v.findViewById<View>(R.id.btnMoveFile).setOnClickListener { ws.move(path.text.toString(), dest.text.toString()); refresh() }
