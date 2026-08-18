@@ -55,19 +55,31 @@ class MainActivity : AppCompatActivity() {
                     "${line.kind}: ${line.text.take(90)}"
             }
         }
-        showGithub()
-        findViewById<BottomNavigationView>(R.id.nav).setOnItemSelectedListener {
-            AndroApp.instance.sessions.save()
-            when (it.itemId) {
-                R.id.tab_github -> showGithub()
-                R.id.tab_dev -> showFiles()
-                R.id.tab_ai -> showAgent()
-                R.id.tab_preview -> showRun()
-                R.id.tab_settings -> showSettings()
-                R.id.tab_logs -> showLogs()
-            }
-            true
+        val tabs = findViewById<TabLayout>(R.id.tabs)
+        listOf("GitHub", "Dev", "AI", "Preview", "Settings", "Logs").forEach {
+            tabs.addTab(tabs.newTab().setText(it))
         }
+        showGithub()
+        tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab) {
+                try {
+                    AndroApp.instance.sessions.save()
+                    when (tab.position) {
+                        0 -> showGithub()
+                        1 -> showFiles()
+                        2 -> showAgent()
+                        3 -> showRun()
+                        4 -> showSettings()
+                        5 -> showLogs()
+                    }
+                } catch (e: Exception) {
+                    toast(e.message ?: "tab error")
+                    LogStore.add("crash", e.stackTraceToString())
+                }
+            }
+            override fun onTabUnselected(tab: TabLayout.Tab) {}
+            override fun onTabReselected(tab: TabLayout.Tab) {}
+        })
     }
 
     override fun onPause() {
