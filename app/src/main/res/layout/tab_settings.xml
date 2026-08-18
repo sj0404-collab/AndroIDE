@@ -24,8 +24,14 @@
         <CheckBox android:id="@+id/showReason" android:text="Show reasoning at start" android:textColor="@color/text" android:layout_width="match_parent" android:layout_height="wrap_content" />
 
         <Button android:id="@+id/btnSaveKeys" android:text="Save" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <TextView android:text="GGUF / ONNX (progress + notify)" android:textColor="@color/accent" android:layout_width="wrap_content" android:layout_height="wrap_content" android:paddingTop="12dp" />
+        <TextView android:id="@+id/modelStatus" android:text="not installed — phone cannot run GGUF without Ollama/llama.cpp. Runner can." android:textColor="@color/gold" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <ProgressBar android:id="@+id/modelProg" style="?android:attr/progressBarStyleHorizontal" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="100" />
         <Button android:id="@+id/btnDlTiny" android:text="Download TinyLlama GGUF" android:layout_width="match_parent" android:layout_height="wrap_content" />
-        <Button android:id="@+id/btnOllama" android:text="Ollama pull llama3.2" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <Button android:id="@+id/btnDlPhi" android:text="Download Phi-3 GGUF" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <Button android:id="@+id/btnUseLocal" android:text="Default: local / dummy key" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <Button android:id="@+id/btnBootRunner" android:text="Any account: create androide-runner + 6h GGUF" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <Button android:id="@+id/btnOllama" android:text="Ollama pull llama3.2 (if installed)" android:layout_width="match_parent" android:layout_height="wrap_content" />
         <TextView android:id="@+id/setLog" android:textColor="@color/gold" android:layout_width="match_parent" android:layout_height="wrap_content" />
     </LinearLayout>
 </ScrollView>

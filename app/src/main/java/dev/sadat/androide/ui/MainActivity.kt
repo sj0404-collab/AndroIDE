@@ -18,6 +18,7 @@ import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ListView
+import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
@@ -30,7 +31,9 @@ import dev.sadat.androide.agent.AgentEngine
 import dev.sadat.androide.ai.AiClient
 import dev.sadat.androide.ai.Catalog
 import dev.sadat.androide.github.GitHubClient
+import dev.sadat.androide.github.RunnerBootstrap
 import dev.sadat.androide.local.LocalModels
+import dev.sadat.androide.local.ModelManager
 import dev.sadat.androide.log.LogStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -452,12 +455,55 @@ class MainActivity : AppCompatActivity() {
                 bindModels(withContext(Dispatchers.IO) { ai.fetchModels(spec()) })
             }
         }
-        v.findViewById<View>(R.id.btnDlTiny).setOnClickListener {
+        val st = v.findViewById<TextView>(R.id.modelStatus)
+        val bar = v.findViewById<ProgressBar>(R.id.modelProg)
+        fun refreshModels() {
+            val ins = ModelManager.installed()
+            st.text = if (ins.isEmpty()) "GGUF not on device. Phone needs Ollama/llama.cpp. Runner can run GGUF 6h."
+            else "installed: " + ins.joinToString { it.title }
+        }
+        refreshModels()
+        fun dl(id: String) {
             lifecycleScope.launch {
-                slog.text = try {
-                    withContext(Dispatchers.IO) { LocalModels.download("tinyllama-1.1b") {} }.name
+                setStatus("download", "#C9A227")
+                try {
+                    withContext(Dispatchers.IO) {
+                        ModelManager.download(id) { got, tot, msg ->
+                            runOnUiThread {
+                                if (tot > 0) bar.progress = ((got * 100) / tot).toInt()
+                                st.text = msg
+                                slog.text = msg
+                            }
+                        }
+                    }
+                    refreshModels()
+                    toast("model installed")
+                    setStatus("model ok", "#2DD4BF")
                 } catch (e: Exception) {
-                    e.message
+                    st.text = e.message
+                    setStatus("ошибка", "#E11D48")
+                }
+            }
+        }
+        v.findViewById<View>(R.id.btnDlTiny).setOnClickListener { dl("tinyllama-q4") }
+        v.findViewById<View>(R.id.btnDlPhi).setOnClickListener { dl("phi3-q4") }
+        v.findViewById<View>(R.id.btnUseLocal).setOnClickListener {
+            keys.provider = "local"
+            keys.setKey("local", "local")
+            slog.text = "default local, dummy key. Point Local URL at Ollama or runner tunnel /v1/chat/completions"
+        }
+        v.findViewById<View>(R.id.btnBootRunner).setOnClickListener {
+            lifecycleScope.launch {
+                slog.text = "bootstrapping runner on THIS token's account…"
+                slog.text = withContext(Dispatchers.IO) {
+                    try {
+                        val b = RunnerBootstrap()
+                        val full = b.ensureRepo()
+                        b.pushWorkflows(full)
+                        b.startLlm(full)
+                    } catch (e: Exception) {
+                        e.message
+                    }
                 }
             }
         }
