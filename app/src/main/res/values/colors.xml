@@ -1,8 +1,13 @@
 <resources>
-    <color name="bg">#0B1220</color>
-    <color name="panel">#121A2B</color>
-    <color name="accent">#00E5FF</color>
-    <color name="gold">#FFD54F</color>
-    <color name="text">#E8F1FF</color>
-    <color name="muted">#8AA0B8</color>
+    <color name="bg">#0B0B0D</color>
+    <color name="panel">#141418</color>
+    <color name="card">#1A1A1F</color>
+    <color name="accent">#2DD4BF</color>
+    <color name="gold">#F5D76E</color>
+    <color name="text">#F2F2F4</color>
+    <color name="muted">#8B8B97</color>
+    <color name="pink">#E879F9</color>
+    <color name="think">#C9A227</color>
+    <color name="stop">#E11D48</color>
+    <color name="fab">#1F1F26</color>
 </resources>

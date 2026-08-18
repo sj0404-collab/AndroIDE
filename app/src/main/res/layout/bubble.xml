@@ -3,30 +3,42 @@
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="6dp">
+    android:paddingTop="10dp"
+    android:paddingBottom="10dp">
     <TextView
         android:id="@+id/who"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textColor="@color/accent"
-        android:textStyle="bold"
-        android:textSize="11sp" />
+        android:textColor="@color/muted"
+        android:textSize="11sp"
+        android:visibility="gone" />
     <TextView
         android:id="@+id/think"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="#9AD7C0"
-        android:fontFamily="monospace"
-        android:textSize="12sp"
+        android:textColor="#C8B48A"
+        android:textSize="13sp"
         android:visibility="gone"
-        android:padding="6dp"
-        android:background="#14261F" />
-    <TextView
-        android:id="@+id/body"
+        android:paddingBottom="8dp" />
+    <LinearLayout
+        android:orientation="horizontal"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColor="@color/text"
-        android:textSize="14sp"
-        android:textIsSelectable="true"
-        android:paddingTop="4dp" />
+        android:layout_height="wrap_content">
+        <View
+            android:id="@+id/bar"
+            android:layout_width="3dp"
+            android:layout_height="match_parent"
+            android:background="@color/pink"
+            android:visibility="gone"
+            android:layout_marginEnd="10dp" />
+        <TextView
+            android:id="@+id/body"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/text"
+            android:textSize="16sp"
+            android:lineSpacingExtra="3dp"
+            android:textIsSelectable="true" />
+    </LinearLayout>
 </LinearLayout>

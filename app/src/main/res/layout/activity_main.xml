@@ -1,44 +1,163 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@color/bg">
 
-    <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/toolbar"
+    <LinearLayout
+        android:id="@+id/chatRoot"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/panel"
-        app:title="AndroIDE"
-        app:titleTextColor="@color/accent"
-        app:subtitle="6 tabs"
-        app:subtitleTextColor="@color/muted" />
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
-    <com.google.android.material.tabs.TabLayout
-        android:id="@+id/tabs"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/panel"
-        app:tabMode="scrollable"
-        app:tabTextColor="@color/muted"
-        app:tabSelectedTextColor="@color/accent"
-        app:tabIndicatorColor="@color/accent" />
+        <LinearLayout
+            android:paddingStart="16dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="14dp"
+            android:paddingBottom="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
 
-    <TextView
-        android:id="@+id/globalInd"
-        android:layout_width="match_parent"
+            <TextView
+                android:id="@+id/brand"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Zen  Agent"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:textColor="@color/text" />
+
+            <Spinner
+                android:id="@+id/topModel"
+                android:layout_width="150dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_chip"
+                android:paddingStart="10dp"
+                android:paddingEnd="6dp" />
+
+            <ImageButton
+                android:id="@+id/btnTopStop"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_stop"
+                android:src="@android:drawable/ic_media_pause"
+                android:contentDescription="stop" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="2dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <View android:id="@+id/statusDot" android:layout_width="8dp" android:layout_height="8dp" android:background="@drawable/dot_think" />
+            <TextView android:id="@+id/statusWord" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="думает" android:textColor="@color/think" android:textSize="13sp" android:paddingStart="8dp" android:textStyle="bold" />
+            <TextView android:id="@+id/roundLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="раунд 0/128" android:textColor="@color/muted" android:textSize="13sp" android:paddingStart="12dp" />
+            <TextView android:id="@+id/instrLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="инстр. 0" android:textColor="@color/muted" android:textSize="13sp" android:paddingStart="10dp" />
+            <TextView android:id="@+id/tokLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="токены 0" android:textColor="@color/muted" android:textSize="13sp" android:paddingStart="10dp" />
+            <TextView android:id="@+id/timeLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0с" android:textColor="@color/text" android:textSize="13sp" android:textStyle="bold" android:paddingStart="10dp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/sessionLine"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="8dp"
+            android:text="сессия 0м / 6ч 0м · осталось 6ч 0м"
+            android:textColor="@color/muted"
+            android:textSize="12sp" />
+
+        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#222228" />
+
+        <ScrollView
+            android:id="@+id/agentScroll"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:fillViewport="true"
+            android:paddingEnd="56dp">
+            <LinearLayout
+                android:id="@+id/chatBox"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+        </ScrollView>
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="12dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <EditText
+                android:id="@+id/agentInput"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_input"
+                android:hint="Задача..."
+                android:textColorHint="@color/muted"
+                android:textColor="@color/text"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:inputType="textCapSentences|textMultiLine" />
+            <ImageButton
+                android:id="@+id/btnSend"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_stop"
+                android:src="@android:drawable/ic_media_play"
+                android:contentDescription="send" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/fabCol"
+        android:orientation="vertical"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="#152033"
-        android:padding="6dp"
-        android:textColor="@color/gold"
-        android:textSize="12sp"
-        android:text="idle · sessions autosave" />
+        android:layout_gravity="end|center_vertical"
+        android:layout_marginEnd="10dp"
+        android:elevation="8dp">
+        <TextView android:id="@+id/fabGh" android:text="GH" style="@style/FabBtn" />
+        <TextView android:id="@+id/fabDev" android:text="Dev" style="@style/FabBtn" />
+        <TextView android:id="@+id/fabPrev" android:text="Run" style="@style/FabBtn" />
+        <TextView android:id="@+id/fabSet" android:text="Set" style="@style/FabBtn" />
+        <TextView android:id="@+id/fabLog" android:text="Log" style="@style/FabBtn" />
+    </LinearLayout>
 
     <FrameLayout
-        android:id="@+id/content"
+        android:id="@+id/sheet"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
-</LinearLayout>
+        android:layout_height="match_parent"
+        android:background="#E60B0B0D"
+        android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true">
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginTop="48dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="64dp"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/bg_input"
+            android:padding="4dp">
+            <TextView android:id="@+id/sheetTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/accent" android:textStyle="bold" android:padding="10dp" android:text="panel" />
+            <FrameLayout android:id="@+id/content" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
+            <Button android:id="@+id/sheetClose" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Закрыть" />
+        </LinearLayout>
+    </FrameLayout>
+</FrameLayout>
