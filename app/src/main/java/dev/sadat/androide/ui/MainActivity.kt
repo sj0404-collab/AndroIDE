@@ -159,6 +159,48 @@ class MainActivity : AppCompatActivity() {
                 bindChat()
             }
         })
+        val presets = AndroApp.instance.presets
+        val pSpin = findViewById<Spinner>(R.id.presetSpin)
+        fun fillPresets() {
+            val all = presets.all()
+            pSpin.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, all.map { it.title })
+            val ix = all.indexOfFirst { it.id == presets.activeId }
+            if (ix >= 0) pSpin.setSelection(ix)
+        }
+        fillPresets()
+        pSpin.setOnItemSelectedListener(simple {
+            val all = presets.all()
+            val ix = pSpin.selectedItemPosition
+            if (ix in all.indices) {
+                presets.activeId = all[ix].id
+                AndroApp.instance.sessions.current.messages.removeAll { it.role == "system" }
+                AndroApp.instance.sessions.save()
+                setStatus("preset ${all[ix].id}", "#2DD4BF")
+            }
+        })
+        findViewById<View>(R.id.btnPresetSave).setOnClickListener {
+            val cur = presets.active()
+            val box = inflater.inflate(R.layout.dialog_preset, null)
+            box.findViewById<EditText>(R.id.presetTitle).setText(cur.title)
+            box.findViewById<EditText>(R.id.presetBody).setText(cur.body)
+            AlertDialog.Builder(this)
+                .setTitle("Default preset")
+                .setView(box)
+                .setPositiveButton("Save default") { _, _ ->
+                    cur.title = box.findViewById<EditText>(R.id.presetTitle).text.toString()
+                    cur.body = box.findViewById<EditText>(R.id.presetBody).text.toString()
+                    presets.upsert(cur)
+                    fillPresets()
+                }
+                .setNeutralButton("New") { _, _ ->
+                    val t = box.findViewById<EditText>(R.id.presetTitle).text.toString().ifBlank { "custom" }
+                    val b = box.findViewById<EditText>(R.id.presetBody).text.toString()
+                    presets.upsert(dev.sadat.androide.preset.Preset("p${System.currentTimeMillis()}", t, b))
+                    fillPresets()
+                }
+                .setNegativeButton("Close", null)
+                .show()
+        }
     }
 
     override fun onDestroy() {
@@ -310,91 +352,6 @@ class MainActivity : AppCompatActivity() {
         }
         v.findViewById<View>(R.id.btnOpenProject).setOnClickListener { ws.openOrCreate(proj.text.toString()); refresh() }
         v.findViewById<View>(R.id.btnRefreshFiles).setOnClickListener { refresh() }
-        v.findViewById<View>(R.id.btnSaveFile).setOnClickListener { ws.write(path.text.toString(), body.text.toString()); refresh() }
-        v.findViewById<View>(R.id.btnMoveFile).setOnClickListener { ws.move(path.text.toString(), dest.text.toString()); refresh() }
-        v.findViewById<View>(R.id.btnCopyFile).setOnClickListener { ws.copy(path.text.toString(), dest.text.toString()); refresh() }
-        v.findViewById<View>(R.id.btnDelFile).setOnClickListener { ws.delete(path.text.toString()); refresh() }
-        show(v)
-    }
-
-    private fun showGithub() {
-        val v = inflater.inflate(R.layout.tab_github, content, false)
-        val token = v.findViewById<EditText>(R.id.ghToken)
-        val log = v.findViewById<TextView>(R.id.ghLog)
-        val who = v.findViewById<TextView>(R.id.ghWho)
-        val repos = v.findViewById<TextView>(R.id.ghRepos)
-        val repo = v.findViewById<EditText>(R.id.ghRepo)
-        token.setText(AndroApp.instance.keys.githubToken)
-        fun go(block: () -> String) {
-            lifecycleScope.launch {
-                try {
-                    log.text = withContext(Dispatchers.IO) { block() }
-                } catch (e: Exception) {
-                    log.text = e.message
-                }
-            }
-        }
-        v.findViewById<View>(R.id.btnSaveToken).setOnClickListener {
-            AndroApp.instance.keys.githubToken = token.text.toString()
-            go {
-                val w = gh.whoami(); runOnUiThread { who.text = w }; w
-            }
-        }
-        v.findViewById<View>(R.id.btnListRepos).setOnClickListener {
-            go {
-                val t = gh.listRepos().joinToString("\n") { it.fullName }
-                runOnUiThread { repos.text = t }
-                t
-            }
-        }
-        v.findViewById<View>(R.id.btnClone).setOnClickListener { go { gh.cloneRepo(repo.text.toString()).absolutePath } }
-        v.findViewById<View>(R.id.btnBind).setOnClickListener { gh.bindRemote(repo.text.toString()); log.text = "bound" }
-        v.findViewById<View>(R.id.btnPush).setOnClickListener {
-            go { gh.commitAndPush(v.findViewById<EditText>(R.id.ghCommitMsg).text.toString()) }
-        }
-        valetOnClickListener { ws.write(path.text.toString(), body.text.toString()); refresh() }
-        v.findViewById<View>(R.id.btnMoveFile).setOnClickListener { ws.move(path.text.toString(), dest.text.toString()); refresh() }
-        v.findViewById<View>(R.id.btnCopyFile).setOnClickListener { ws.copy(path.text.toString(), dest.text.toString()); refresh() }
-        v.findViewById<View>(R.id.btnDelFile).setOnClickListener { ws.delete(path.text.toString()); refresh() }
-        show(v)
-    }
-
-    private fun showGithub() {
-        val v = inflater.inflate(R.layout.tab_github, content, false)
-        val token = v.findViewById<EditText>(R.id.ghToken)
-        val log = v.findViewById<TextView>(R.id.ghLog)
-        val who = v.findViewById<TextView>(R.id.ghWho)
-        val repos = v.findViewById<TextView>(R.id.ghRepos)
-        val repo = v.findViewById<EditText>(R.id.ghRepo)
-        token.setText(AndroApp.instance.keys.githubToken)
-        fun go(block: () -> String) {
-            lifecycleScope.launch {
-                try {
-                    log.text = withContext(Dispatchers.IO) { block() }
-                } catch (e: Exception) {
-                    log.text = e.message
-                }
-            }
-        }
-        v.findViewById<View>(R.id.btnSaveToken).setOnClickListener {
-            AndroApp.instance.keys.githubToken = token.text.toString()
-            go {
-                val w = gh.whoami(); runOnUiThread { who.text = w }; w
-            }
-        }
-        v.findViewById<View>(R.id.btnListRepos).setOnClickListener {
-            go {
-                val t = gh.listRepos().joinToString("\n") { it.fullName }
-                runOnUiThread { repos.text = t }
-                t
-            }
-        }
-        v.findViewById<View>(R.id.btnClone).setOnClickListener { go { gh.cloneRepo(repo.text.toString()).absolutePath } }
-        v.findViewById<View>(R.id.btnBind).setOnClickListener { gh.bindRemote(repo.text.toString()); log.text = "bound" }
-        v.findViewById<View>(R.id.btnPush).setOnClickListener {
-            go { gh.commitAndPush(v.findViewById<EditText>(R.id.ghCommitMsg).text.toString()) }
-        }
-        v.fesh() }
         v.findViewById<View>(R.id.btnSaveFile).setOnClickListener { ws.write(path.text.toString(), body.text.toString()); refresh() }
         v.findViewById<View>(R.id.btnMoveFile).setOnClickListener { ws.move(path.text.toString(), dest.text.toString()); refresh() }
         v.findViewById<View>(R.id.btnCopyFile).setOnClickListener { ws.copy(path.text.toString(), dest.text.toString()); refresh() }
