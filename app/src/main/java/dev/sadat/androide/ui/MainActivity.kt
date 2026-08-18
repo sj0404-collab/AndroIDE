@@ -35,6 +35,8 @@ import dev.sadat.androide.github.RunnerBootstrap
 import dev.sadat.androide.local.LocalModels
 import dev.sadat.androide.local.ModelManager
 import dev.sadat.androide.log.LogStore
+import dev.sadat.androide.update.UpdateChecker
+import dev.sadat.androide.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -95,7 +97,22 @@ class MainActivity : AppCompatActivity() {
         bindSessions()
         bindChat()
         handler.post(clock)
-        setStatus("готов", "#2DD4BF")
+        setStatus("готов v${BuildConfig.VERSION_NAME}", "#2DD4BF")
+        autoUpdate()
+    }
+
+    private fun autoUpdate() {
+        lifecycleScope.launch {
+            try {
+                val chk = UpdateChecker(this@MainActivity)
+                val rel = withContext(Dispatchers.IO) { chk.latest() } ?: return@launch
+                if (chk.isNewer(rel.tag)) {
+                    setStatus("update ${rel.tag}", "#F5D76E")
+                    toast("Доступна ${rel.tag}. Set → Check update")
+                    ModelManager.notify(this@MainActivity, "AndroIDE ${rel.tag}", "New version. Open Set to install.")
+                }
+            } catch (_: Exception) { }
+        }
     }
 
     private fun bindSessions() {
@@ -504,6 +521,25 @@ class MainActivity : AppCompatActivity() {
                     } catch (e: Exception) {
                         e.message
                     }
+                }
+            }
+        }
+        v.findViewById<View>(R.id.btnCheckUpdate).setOnClickListener {
+            lifecycleScope.launch {
+                slog.text = "checking GitHub releases…"
+                try {
+                    val chk = UpdateChecker(this@MainActivity)
+                    val rel = withContext(Dispatchers.IO) { chk.latest() }!!
+                    if (!chk.isNewer(rel.tag)) {
+                        slog.text = "up to date ${BuildConfig.VERSION_NAME} (latest ${rel.tag})"
+                    } else {
+                        slog.text = "downloading ${rel.tag}"
+                        val apk = withContext(Dispatchers.IO) { chk.downloadApk(rel.apkUrl) { slog.text = it } }
+                        chk.install(apk)
+                        slog.text = "installer started ${rel.tag}"
+                    }
+                } catch (e: Exception) {
+                    slog.text = e.message
                 }
             }
         }

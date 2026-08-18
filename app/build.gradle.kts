@@ -10,13 +10,25 @@ android {
         applicationId = "dev.sadat.androide"
         minSdk = 26
         targetSdk = 35
-        versionCode = 9
-        versionName = "2.5.0"
+        versionCode = 10
+        versionName = "2.6.0"
+    }
+    signingConfigs {
+        create("unified") {
+            storeFile = file("../keystore/androide.jks")
+            storePassword = "androide-unified-2026"
+            keyAlias = "androide"
+            keyPassword = "androide-unified-2026"
+        }
     }
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("unified")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+        debug {
+            signingConfig = signingConfigs.getByName("unified")
         }
     }
     compileOptions {
