@@ -1,6 +1,7 @@
 package dev.sadat.androide
 
 import android.app.Application
+import dev.sadat.androide.session.SessionStore
 import dev.sadat.androide.workspace.KeyStore
 import dev.sadat.androide.workspace.Workspace
 
@@ -9,12 +10,15 @@ class AndroApp : Application() {
         private set
     lateinit var workspace: Workspace
         private set
+    lateinit var sessions: SessionStore
+        private set
 
     override fun onCreate() {
         super.onCreate()
         instance = this
         keys = KeyStore(this)
         workspace = Workspace(this)
+        sessions = SessionStore(this)
     }
 
     companion object {

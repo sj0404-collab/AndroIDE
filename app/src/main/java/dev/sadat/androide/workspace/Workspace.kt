@@ -5,6 +5,8 @@ import java.io.File
 
 class Workspace(ctx: Context) {
     val root: File = File(ctx.filesDir, "workspace").apply { mkdirs() }
+    val modelsDir: File = File(ctx.filesDir, "local-models").apply { mkdirs() }
+    val pluginsDir: File = File(ctx.filesDir, "plugins").apply { mkdirs() }
     var currentProject: File = File(root, "default").apply { mkdirs() }
 
     fun listProjects(): List<File> =
@@ -40,9 +42,36 @@ class Workspace(ctx: Context) {
         return f
     }
 
+    fun writeBytes(rel: String, bytes: ByteArray): File {
+        val f = resolve(rel)
+        f.parentFile?.mkdirs()
+        f.writeBytes(bytes)
+        return f
+    }
+
     fun delete(rel: String): Boolean {
         val f = resolve(rel)
-        return f.exists() && f.delete()
+        return f.exists() && f.deleteRecursively()
+    }
+
+    fun move(from: String, to: String): Boolean {
+        val src = resolve(from)
+        val dst = resolve(to)
+        if (!src.exists()) return false
+        dst.parentFile?.mkdirs()
+        return src.renameTo(dst) || run {
+            src.copyRecursively(dst, overwrite = true)
+            src.deleteRecursively()
+        }
+    }
+
+    fun copy(from: String, to: String): Boolean {
+        val src = resolve(from)
+        val dst = resolve(to)
+        if (!src.exists()) return false
+        dst.parentFile?.mkdirs()
+        src.copyRecursively(dst, overwrite = true)
+        return true
     }
 
     fun resolve(rel: String): File {
@@ -56,6 +85,6 @@ class Workspace(ctx: Context) {
         return files.take(max).joinToString("\n") { it.relativeTo(currentProject).path }
     }
 
-    private fun sanitize(name: String): String =
+    fun sanitize(name: String): String =
         name.trim().ifBlank { "project" }.replace(Regex("[^A-Za-z0-9._-]"), "_")
 }

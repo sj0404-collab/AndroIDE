@@ -1,53 +1,25 @@
-# AndroIDE 2.0 — AI game/app IDE on Android
+# AndroIDE 2.1
 
-Visual Blueprint-inspired mobile IDE. **The agent writes the project. You only correct files and press Run.**
+AI writes the project. You review, correct, Run.
 
-## AI providers
+## 2.1
 
-| Provider | Key |
-|---|---|
-| **Zen / OpenCode** (`https://opencode.ai/zen/v1`) | **not required** — verified live (`big-pickle` and `*-free` models) |
-| **OpenRouter** | optional; free slugs like `qwen/qwen3-coder:free` |
-| **Pollinations** `text.pollinations.ai/openai` | works without key; `pk_`/`sk_` optional |
-| **Pollinations gen** | key preferred |
-| **Glean / Glens** | `instanceHost\|token` |
-| **Groq** | `gsk_…` |
-| **Gemini** | `AIza…` |
-| **OpenAI-compatible** | `url\|key` or key only |
+- Chat **sessions** persist (switch / new). Chat is not wiped on tab change.
+- **Rounds** `current/max` (Keys → max rounds).
+- **Auto-rotate** models on 429 / quota / timeout (Zen free → Pollinations → OpenRouter free → local).
+- **Reasoning** shown at the start of a turn (`reasoning_content`, `<think>`).
+- **Accounts** isolate keys / GitHub tokens / local URL.
+- **Files**: browse projects, move, copy, edit.
+- **Plugins**: JSON in app `plugins/` (`example-lint.json`). Agent ` ```plugin name args` `.
+- **Templates**: 2D Phaser, 3D Three.js, React CDN, Kotlin stub, Canvas.
+- **Art**: ` ```image assets/icon.png | prompt` ` via Pollinations.
+- **Web**: ` ```fetch https://…` ` strips HTML and feeds the agent.
+- **Local models**: Ollama / llama.cpp / LM Studio URL; download TinyLlama GGUF; `ollama pull`.
 
-Keys live in app private prefs. Zen and Pollinations can run with an empty key field.
+## Agent fences
 
-## GitHub (no stubs)
-
-Uses the real GitHub REST + Git Data API with your PAT (`repo` + `workflow`):
-
-- `GET /user`, `GET /user/repos`
-- clone via `git/trees?recursive=1` + file contents
-- commit + push via blobs → tree → commit → update ref
-- create repo, release, `workflow_dispatch` on `android.yml`
-
-## Agent protocol
-
-The model emits:
-
-````
-```write path/file.ext
-contents
-```
-````
-
-Also: `delete`, `read`, `github list|clone|bind|commit|release|workflow`.
+write / delete / read / move / template / image / fetch / github / local pull / plugin
 
 ## Run
 
-If the agent writes `index.html` (or `game.html`), open the **Run** tab.
-
-## Build
-
-```
-./gradlew assembleRelease
-```
-
-CI: `.github/workflows/android.yml`
-
-Legacy Eclipse sources are in `legacy/`.
+Open `index.html` in the Run tab (React / Phaser / Three work in WebView if CDN allowed).

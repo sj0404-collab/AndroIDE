@@ -8,11 +8,15 @@ import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.ArrayAdapter
+import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.ListView
+import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -22,6 +26,8 @@ import dev.sadat.androide.agent.AgentEngine
 import dev.sadat.androide.ai.AiClient
 import dev.sadat.androide.ai.Catalog
 import dev.sadat.androide.github.GitHubClient
+import dev.sadat.androide.local.LocalModels
+import dev.sadat.androide.project.Templates
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -30,11 +36,9 @@ import java.io.File
 class MainActivity : AppCompatActivity() {
     private lateinit var content: android.widget.FrameLayout
     private val inflater by lazy { LayoutInflater.from(this) }
-    private val agent = AgentEngine()
+    private val agent by lazy { AgentEngine(AndroApp.instance.sessions) }
     private val ai = AiClient()
     private val gh by lazy { GitHubClient(AndroApp.instance.workspace) }
-    private var agentView: View? = null
-    private var filesView: View? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,57 +62,129 @@ class MainActivity : AppCompatActivity() {
         content.addView(v)
     }
 
+    private fun bubble(parent: LinearLayout, who: String, body: String, think: String = "") {
+        val b = inflater.inflate(R.layout.bubble, parent, false)
+        b.findViewById<TextView>(R.id.who).text = who
+        b.findViewById<TextView>(R.id.body).text = body
+        val t = b.findViewById<TextView>(R.id.think)
+        if (think.isNotBlank() && AndroApp.instance.keys.showReasoning) {
+            t.visibility = View.VISIBLE
+            t.text = "thinking\n$think"
+        }
+        parent.addView(b)
+    }
+
     private fun showAgent() {
         val v = inflater.inflate(R.layout.tab_agent, content, false)
-        agentView = v
-        val log = v.findViewById<TextView>(R.id.agentLog)
+        val box = v.findViewById<LinearLayout>(R.id.chatBox)
+        val scroll = v.findViewById<ScrollView>(R.id.agentScroll)
         val meta = v.findViewById<TextView>(R.id.agentMeta)
+        val rounds = v.findViewById<TextView>(R.id.roundLabel)
         val input = v.findViewById<EditText>(R.id.agentInput)
+        val spin = v.findViewById<Spinner>(R.id.sessionSpin)
+        val sessions = AndroApp.instance.sessions
         val keys = AndroApp.instance.keys
-        meta.text = "project=${AndroApp.instance.workspace.currentProject.name}  ${keys.provider}/${keys.model}"
+
+        fun paintSession() {
+            val s = sessions.current
+            box.removeAllViews()
+            s.messages.filter { it.role != "system" }.forEach { m ->
+                bubble(box, m.role.uppercase(), m.content, m.reasoning)
+            }
+            rounds.text = "${s.rounds}/${keys.maxRounds}"
+            meta.text = "acc=${keys.account}  ${keys.provider}/${keys.model}  proj=${AndroApp.instance.workspace.currentProject.name}"
+            scroll.post { scroll.fullScroll(View.FOCUS_DOWN) }
+        }
+
+        fun fillSessions() {
+            val list = sessions.list()
+            spin.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, list.map { "${it.id} ${it.title}" })
+            val i = list.indexOfFirst { it.id == sessions.current.id }
+            if (i >= 0) spin.setSelection(i)
+        }
+        fillSessions()
+        paintSession()
+        spin.setOnItemSelectedListener(simple {
+            val list = sessions.list()
+            val i = spin.selectedItemPosition
+            if (i in list.indices) {
+                sessions.switchTo(list[i].id)
+                paintSession()
+            }
+        })
+        v.findViewById<View>(R.id.btnNewSession).setOnClickListener {
+            sessions.create("New session", AndroApp.instance.workspace.currentProject.name)
+            fillSessions()
+            paintSession()
+        }
+        v.findViewById<View>(R.id.btnTmpl).setOnClickListener {
+            val kinds = arrayOf("2d", "3d", "react", "kotlin", "canvas")
+            AlertDialog.Builder(this).setTitle("Template").setItems(kinds) { _, i ->
+                Templates.apply(kinds[i])
+                toast("template ${kinds[i]}")
+            }.show()
+        }
         v.findViewById<View>(R.id.btnSend).setOnClickListener {
             val text = input.text.toString().trim()
             if (text.isEmpty()) return@setOnClickListener
             input.setText("")
-            log.append("\n\nYOU: $text\n")
+            bubble(box, "YOU", text)
             lifecycleScope.launch {
                 try {
                     val out = withContext(Dispatchers.IO) {
                         agent.run(text) { ev ->
-                            runOnUiThread { log.append("\n[${ev.kind}] ${ev.text}\n") }
+                            runOnUiThread {
+                                if (ev.kind == "think") bubble(box, "THINK", "", ev.text)
+                                else bubble(box, ev.kind.uppercase(), ev.text)
+                                rounds.text = "${sessions.current.rounds}/${keys.maxRounds}"
+                                scroll.post { scroll.fullScroll(View.FOCUS_DOWN) }
+                            }
                         }
                     }
-                    log.append("\nAI:\n$out\n")
+                    bubble(box, "AI", out)
                 } catch (e: Exception) {
-                    log.append("\nERROR: ${e.message}\n")
+                    bubble(box, "ERROR", e.message ?: "fail")
                 }
+                sessions.save()
+                fillSessions()
+                scroll.post { scroll.fullScroll(View.FOCUS_DOWN) }
             }
-        }
-        v.findViewById<View>(R.id.btnClear).setOnClickListener {
-            agent.reset()
-            log.text = "session reset"
         }
         show(v)
     }
 
     private fun showFiles() {
         val v = inflater.inflate(R.layout.tab_files, content, false)
-        filesView = v
         val ws = AndroApp.instance.workspace
         val list = v.findViewById<ListView>(R.id.fileList)
         val path = v.findViewById<EditText>(R.id.filePath)
+        val dest = v.findViewById<EditText>(R.id.moveTo)
         val body = v.findViewById<EditText>(R.id.fileBody)
         val proj = v.findViewById<EditText>(R.id.projectName)
-        proj.setText(ws.currentProject.name)
+        val pSpin = v.findViewById<Spinner>(R.id.projectSpin)
+        fun projects() = ws.listProjects().map { it.name }
         fun refresh() {
+            pSpin.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, projects())
+            val i = projects().indexOf(ws.currentProject.name)
+            if (i >= 0) pSpin.setSelection(i)
             val files = ws.listFiles().map { it.relativeTo(ws.currentProject).path }
             list.adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, files)
+            proj.setText(ws.currentProject.name)
         }
         refresh()
+        pSpin.setOnItemSelectedListener(simple {
+            val name = pSpin.selectedItem?.toString() ?: return@simple
+            ws.openOrCreate(name)
+            val files = ws.listFiles().map { it.relativeTo(ws.currentProject).path }
+            list.adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, files)
+        })
         list.setOnItemClickListener { _, _, i, _ ->
             val rel = list.adapter.getItem(i) as String
             path.setText(rel)
-            body.setText(ws.read(rel))
+            dest.setText(rel)
+            val f = ws.resolve(rel)
+            if (rel.endsWith(".png") || rel.endsWith(".jpg")) body.setText("(binary ${f.length()} bytes)")
+            else body.setText(ws.read(rel))
         }
         v.findViewById<View>(R.id.btnOpenProject).setOnClickListener {
             ws.openOrCreate(proj.text.toString())
@@ -116,14 +192,16 @@ class MainActivity : AppCompatActivity() {
         }
         v.findViewById<View>(R.id.btnRefreshFiles).setOnClickListener { refresh() }
         v.findViewById<View>(R.id.btnSaveFile).setOnClickListener {
-            ws.write(path.text.toString(), body.text.toString())
-            refresh()
-            toast("saved")
+            ws.write(path.text.toString(), body.text.toString()); refresh(); toast("saved")
+        }
+        v.findViewById<View>(R.id.btnMoveFile).setOnClickListener {
+            ws.move(path.text.toString(), dest.text.toString()); refresh(); toast("moved")
+        }
+        v.findViewById<View>(R.id.btnCopyFile).setOnClickListener {
+            ws.copy(path.text.toString(), dest.text.toString()); refresh(); toast("copied")
         }
         v.findViewById<View>(R.id.btnDelFile).setOnClickListener {
-            ws.delete(path.text.toString())
-            body.setText("")
-            refresh()
+            ws.delete(path.text.toString()); body.setText(""); refresh()
         }
         show(v)
     }
@@ -141,7 +219,6 @@ class MainActivity : AppCompatActivity() {
                 try {
                     val r = withContext(Dispatchers.IO) { block() }
                     log.text = r
-                    toast(r.take(80))
                 } catch (e: Exception) {
                     log.text = e.message
                 }
@@ -149,41 +226,41 @@ class MainActivity : AppCompatActivity() {
         }
         v.findViewById<View>(R.id.btnSaveToken).setOnClickListener {
             AndroApp.instance.keys.githubToken = token.text.toString()
-            go { val w = gh.whoami(); runOnUiThread { who.text = w }; w }
+            go {
+                val w = gh.whoami()
+                runOnUiThread { who.text = w }
+                w
+            }
         }
         v.findViewById<View>(R.id.btnListRepos).setOnClickListener {
             go {
                 val list = gh.listRepos()
-                val t = list.joinToString("\n") { "${it.fullName}  ${it.defaultBranch}" }
+                val t = list.joinToString("\n") { it.fullName }
                 runOnUiThread { repos.text = t }
-                "loaded ${list.size} repos"
+                "repos ${list.size}"
             }
         }
-        v.findViewById<View>(R.id.btnClone).setOnClickListener {
-            go { gh.cloneRepo(repo.text.toString()).absolutePath }
+        repos.setOnLongClickListener {
+            val line = repos.text.lineSequence().firstOrNull() ?: return@setOnLongClickListener true
+            repo.setText(line.substringBefore(" "))
+            true
         }
-        v.findViewById<View>(R.id.btnBind).setOnClickListener {
-            gh.bindRemote(repo.text.toString())
-            log.text = "bound ${repo.text}"
-        }
+        v.findViewById<View>(R.id.btnClone).setOnClickListener { go { gh.cloneRepo(repo.text.toString()).absolutePath } }
+        v.findViewById<View>(R.id.btnBind).setOnClickListener { gh.bindRemote(repo.text.toString()); log.text = "bound" }
         v.findViewById<View>(R.id.btnPush).setOnClickListener {
-            val msg = v.findViewById<EditText>(R.id.ghCommitMsg).text.toString()
-            go { gh.commitAndPush(msg) }
+            go { gh.commitAndPush(v.findViewById<EditText>(R.id.ghCommitMsg).text.toString()) }
         }
         v.findViewById<View>(R.id.btnRelease).setOnClickListener {
-            val tag = v.findViewById<EditText>(R.id.ghTag).text.toString().ifBlank { "v2.0.0" }
-            go { gh.createRelease(tag, "AndroIDE $tag", "Agent release built from device") }
+            val tag = v.findViewById<EditText>(R.id.ghTag).text.toString().ifBlank { "v2.1.0" }
+            go { gh.createRelease(tag, "AndroIDE $tag", "signed agent release") }
         }
-        v.findViewById<View>(R.id.btnWorkflow).setOnClickListener {
-            go { gh.dispatchWorkflow("android.yml") }
-        }
+        v.findViewById<View>(R.id.btnWorkflow).setOnClickListener { go { gh.dispatchWorkflow("android.yml") } }
         v.findViewById<View>(R.id.btnCreateRepo).setOnClickListener {
-            val name = v.findViewById<EditText>(R.id.ghNewRepo).text.toString()
             go {
-                val r = gh.createRepo(name)
+                val r = gh.createRepo(v.findViewById<EditText>(R.id.ghNewRepo).text.toString())
                 runOnUiThread { repo.setText(r.fullName) }
                 gh.bindRemote(r.fullName)
-                "created ${r.fullName}"
+                r.fullName
             }
         }
         show(v)
@@ -196,16 +273,15 @@ class MainActivity : AppCompatActivity() {
         val hint = v.findViewById<TextView>(R.id.runHint)
         web.settings.javaScriptEnabled = true
         web.settings.domStorageEnabled = true
+        web.settings.allowFileAccess = true
         web.webViewClient = WebViewClient()
         web.webChromeClient = WebChromeClient()
         v.findViewById<View>(R.id.btnRunHtml).setOnClickListener {
             val ws = AndroApp.instance.workspace
             val html = listOf("index.html", "game.html", "play.html")
-                .map { File(ws.currentProject, it) }
-                .firstOrNull { it.exists() }
-            if (html == null) {
-                hint.text = "No index.html in ${ws.currentProject.name}. Ask the agent to write a playable HTML game."
-            } else {
+                .map { File(ws.currentProject, it) }.firstOrNull { it.exists() }
+            if (html == null) hint.text = "Нет index.html — шаблон 2D/3D или попроси агента"
+            else {
                 hint.text = html.absolutePath
                 web.loadUrl("file://${html.absolutePath}")
             }
@@ -216,11 +292,27 @@ class MainActivity : AppCompatActivity() {
     private fun showSettings() {
         val v = inflater.inflate(R.layout.tab_settings, content, false)
         val keys = AndroApp.instance.keys
+        val aSpin = v.findViewById<Spinner>(R.id.accountSpin)
         val pSpin = v.findViewById<Spinner>(R.id.providerSpin)
         val mSpin = v.findViewById<Spinner>(R.id.modelSpin)
         val hint = v.findViewById<TextView>(R.id.keyHint)
         val key = v.findViewById<EditText>(R.id.apiKey)
         val slog = v.findViewById<TextView>(R.id.setLog)
+        val local = v.findViewById<EditText>(R.id.localBase)
+        val rounds = v.findViewById<EditText>(R.id.maxRounds)
+        val rot = v.findViewById<CheckBox>(R.id.autoRotate)
+        val reason = v.findViewById<CheckBox>(R.id.showReason)
+        fun accFill() {
+            val acc = keys.accounts()
+            aSpin.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, acc)
+            val i = acc.indexOf(keys.account)
+            if (i >= 0) aSpin.setSelection(i)
+        }
+        accFill()
+        local.setText(keys.localBase)
+        rounds.setText(keys.maxRounds.toString())
+        rot.isChecked = keys.autoRotate
+        reason.isChecked = keys.showReasoning
         val labels = Catalog.all.map { it.label }
         pSpin.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, labels)
         val idx = Catalog.all.indexOfFirst { it.id == keys.provider }.coerceAtLeast(0)
@@ -230,29 +322,60 @@ class MainActivity : AppCompatActivity() {
             val mi = models.indexOf(keys.model)
             if (mi >= 0) mSpin.setSelection(mi)
         }
-        fun currentSpec() = Catalog.all[pSpin.selectedItemPosition]
-        bindModels(currentSpec().models)
-        hint.text = currentSpec().keyHint
-        key.setText(keys.getKey(currentSpec().id))
+        fun spec() = Catalog.all[pSpin.selectedItemPosition]
+        bindModels(spec().models)
+        hint.text = spec().keyHint
+        key.setText(keys.getKey(spec().id))
         pSpin.setOnItemSelectedListener(simple {
-            val s = currentSpec()
-            hint.text = s.keyHint
-            key.setText(keys.getKey(s.id))
-            bindModels(s.models)
+            hint.text = spec().keyHint
+            key.setText(keys.getKey(spec().id))
+            bindModels(spec().models)
         })
+        v.findViewById<View>(R.id.btnAddAccount).setOnClickListener {
+            val n = v.findViewById<EditText>(R.id.newAccount).text.toString()
+            if (n.isNotBlank()) keys.addAccount(n)
+            else keys.account = aSpin.selectedItem?.toString() ?: "default"
+            accFill()
+            slog.text = "account ${keys.account}"
+        }
         v.findViewById<View>(R.id.btnSaveKeys).setOnClickListener {
-            val s = currentSpec()
+            val s = spec()
             keys.provider = s.id
             keys.model = mSpin.selectedItem?.toString() ?: s.defaultModel
             keys.setKey(s.id, key.text.toString())
-            slog.text = "saved ${s.id} / ${keys.model}"
+            keys.localBase = local.text.toString()
+            keys.maxRounds = rounds.text.toString().toIntOrNull() ?: 8
+            keys.autoRotate = rot.isChecked
+            keys.showReasoning = reason.isChecked
+            slog.text = "saved ${keys.snapshot()}"
         }
         v.findViewById<View>(R.id.btnRefreshModels).setOnClickListener {
-            val s = currentSpec()
             lifecycleScope.launch {
-                val models = withContext(Dispatchers.IO) { ai.fetchModels(s) }
+                val models = withContext(Dispatchers.IO) { ai.fetchModels(spec()) }
                 bindModels(models)
                 slog.text = "${models.size} models"
+            }
+        }
+        v.findViewById<View>(R.id.btnDlTiny).setOnClickListener {
+            lifecycleScope.launch {
+                slog.text = "downloading…"
+                try {
+                    val f = withContext(Dispatchers.IO) { LocalModels.download("tinyllama-1.1b") { } }
+                    slog.text = "ok ${f.name} ${f.length()}"
+                } catch (e: Exception) {
+                    slog.text = e.message
+                }
+            }
+        }
+        v.findViewById<View>(R.id.btnOllama).setOnClickListener {
+            lifecycleScope.launch {
+                slog.text = withContext(Dispatchers.IO) {
+                    try {
+                        LocalModels.ollamaPull("llama3.2")
+                    } catch (e: Exception) {
+                        e.message
+                    }
+                }
             }
         }
         show(v)

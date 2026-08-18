@@ -3,7 +3,17 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="10dp">
+    android:padding="8dp">
+
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <LinearLayout android:orientation="horizontal" android:layout_width="wrap_content" android:layout_height="wrap_content">
+            <Spinner android:id="@+id/sessionSpin" android:layout_width="180dp" android:layout_height="wrap_content" />
+            <Button android:id="@+id/btnNewSession" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="New" />
+            <TextView android:id="@+id/roundLabel" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/gold" android:padding="8dp" android:text="0/8" />
+        </LinearLayout>
+    </HorizontalScrollView>
 
     <TextView
         android:id="@+id/agentMeta"
@@ -13,19 +23,17 @@
         android:textSize="12sp" />
 
     <ScrollView
+        android:id="@+id/agentScroll"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
         android:fillViewport="true">
-        <TextView
-            android:id="@+id/agentLog"
+        <LinearLayout
+            android:id="@+id/chatBox"
+            android:orientation="vertical"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:fontFamily="monospace"
-            android:textColor="@color/text"
-            android:textSize="13sp"
-            android:textIsSelectable="true"
-            android:padding="8dp" />
+            android:padding="4dp" />
     </ScrollView>
 
     <EditText
@@ -33,26 +41,14 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:minLines="2"
-        android:hint="Describe the game or program. AI writes the files."
+        android:hint="Сделай 3D игру / React / Kotlin… ИИ пишет сам"
         android:textColor="@color/text"
         android:textColorHint="@color/muted"
         android:background="@color/panel"
         android:padding="10dp" />
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
-        <Button
-            android:id="@+id/btnSend"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Let AI do it" />
-        <Button
-            android:id="@+id/btnClear"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Reset" />
+    <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
+        <Button android:id="@+id/btnSend" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Run agent" />
+        <Button android:id="@+id/btnTmpl" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="2D/3D" />
     </LinearLayout>
 </LinearLayout>

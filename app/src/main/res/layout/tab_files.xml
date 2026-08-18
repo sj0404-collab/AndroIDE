@@ -5,48 +5,22 @@
     android:orientation="vertical"
     android:padding="8dp">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
-        <EditText
-            android:id="@+id/projectName"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:hint="project name"
-            android:textColor="@color/text"
-            android:textColorHint="@color/muted" />
+    <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
+        <Spinner android:id="@+id/projectSpin" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" />
+        <EditText android:id="@+id/projectName" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:hint="new project" android:textColor="@color/text" android:textColorHint="@color/muted" />
         <Button android:id="@+id/btnOpenProject" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Open" />
-        <Button android:id="@+id/btnRefreshFiles" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="↻" />
     </LinearLayout>
+    <Button android:id="@+id/btnRefreshFiles" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Refresh files" />
 
-    <ListView
-        android:id="@+id/fileList"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
+    <ListView android:id="@+id/fileList" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
 
-    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Editor" android:textColor="@color/accent" />
-    <EditText
-        android:id="@+id/filePath"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="path"
-        android:textColor="@color/text"
-        android:textColorHint="@color/muted" />
-    <EditText
-        android:id="@+id/fileBody"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1.2"
-        android:gravity="top"
-        android:fontFamily="monospace"
-        android:textSize="12sp"
-        android:textColor="@color/text"
-        android:background="@color/panel" />
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-        <Button android:id="@+id/btnSaveFile" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Save correction" />
-        <Button android:id="@+id/btnDelFile" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Delete" />
+    <EditText android:id="@+id/filePath" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="path" android:textColor="@color/text" android:textColorHint="@color/muted" />
+    <EditText android:id="@+id/moveTo" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="move/copy to path" android:textColor="@color/text" android:textColorHint="@color/muted" />
+    <EditText android:id="@+id/fileBody" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1.1" android:gravity="top" android:fontFamily="monospace" android:textSize="12sp" android:textColor="@color/text" android:background="@color/panel" />
+    <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
+        <Button android:id="@+id/btnSaveFile" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Save" />
+        <Button android:id="@+id/btnMoveFile" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Move" />
+        <Button android:id="@+id/btnCopyFile" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Copy" />
+        <Button android:id="@+id/btnDelFile" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Del" />
     </LinearLayout>
 </LinearLayout>

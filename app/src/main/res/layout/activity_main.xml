@@ -13,7 +13,7 @@
         android:background="@color/panel"
         app:title="AndroIDE"
         app:titleTextColor="@color/accent"
-        app:subtitle="AI builds. You review and run."
+        app:subtitle="sessions · reasoning · games"
         app:subtitleTextColor="@color/muted" />
 
     <FrameLayout
@@ -27,6 +27,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/panel"
+        app:labelVisibilityMode="labeled"
         app:itemIconTint="@color/accent"
         app:itemTextColor="@color/text"
         app:menu="@menu/nav" />

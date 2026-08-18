@@ -2,22 +2,30 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
-    <LinearLayout
-        android:orientation="vertical"
-        android:padding="10dp"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+    <LinearLayout android:orientation="vertical" android:padding="10dp" android:layout_width="match_parent" android:layout_height="wrap_content">
+
+        <TextView android:text="Account" android:textColor="@color/accent" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+        <Spinner android:id="@+id/accountSpin" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <EditText android:id="@+id/newAccount" android:hint="new account name" android:textColor="@color/text" android:textColorHint="@color/muted" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <Button android:id="@+id/btnAddAccount" android:text="Switch / create account" android:layout_width="match_parent" android:layout_height="wrap_content" />
 
         <TextView android:text="Provider" android:textColor="@color/accent" android:layout_width="wrap_content" android:layout_height="wrap_content" />
         <Spinner android:id="@+id/providerSpin" android:layout_width="match_parent" android:layout_height="wrap_content" />
-
         <TextView android:text="Model" android:textColor="@color/accent" android:layout_width="wrap_content" android:layout_height="wrap_content" />
         <Spinner android:id="@+id/modelSpin" android:layout_width="match_parent" android:layout_height="wrap_content" />
-        <Button android:id="@+id/btnRefreshModels" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Refresh models from API" />
+        <Button android:id="@+id/btnRefreshModels" android:text="Refresh models" android:layout_width="match_parent" android:layout_height="wrap_content" />
 
-        <TextView android:id="@+id/keyHint" android:textColor="@color/muted" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingTop="8dp" />
-        <EditText android:id="@+id/apiKey" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="API key (empty = no-key providers)" android:inputType="textPassword" android:textColor="@color/text" android:textColorHint="@color/muted" />
-        <Button android:id="@+id/btnSaveKeys" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Save provider + key" />
+        <TextView android:id="@+id/keyHint" android:textColor="@color/muted" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <EditText android:id="@+id/apiKey" android:hint="API key" android:inputType="textPassword" android:textColor="@color/text" android:textColorHint="@color/muted" android:layout_width="match_parent" android:layout_height="wrap_content" />
+
+        <EditText android:id="@+id/localBase" android:hint="Local OpenAI URL (Ollama/llama.cpp)" android:textColor="@color/text" android:textColorHint="@color/muted" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <EditText android:id="@+id/maxRounds" android:hint="max rounds" android:inputType="number" android:textColor="@color/text" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <CheckBox android:id="@+id/autoRotate" android:text="Auto-switch model on rate limit" android:textColor="@color/text" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <CheckBox android:id="@+id/showReason" android:text="Show reasoning at start" android:textColor="@color/text" android:layout_width="match_parent" android:layout_height="wrap_content" />
+
+        <Button android:id="@+id/btnSaveKeys" android:text="Save" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <Button android:id="@+id/btnDlTiny" android:text="Download TinyLlama GGUF" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <Button android:id="@+id/btnOllama" android:text="Ollama pull llama3.2" android:layout_width="match_parent" android:layout_height="wrap_content" />
         <TextView android:id="@+id/setLog" android:textColor="@color/gold" android:layout_width="match_parent" android:layout_height="wrap_content" />
     </LinearLayout>
 </ScrollView>
