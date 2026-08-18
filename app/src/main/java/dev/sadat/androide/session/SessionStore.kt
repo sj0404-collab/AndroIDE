@@ -44,6 +44,8 @@ class SessionStore(ctx: Context) {
                     .put("content", it.content)
                     .put("reasoning", it.reasoning)
                     .put("ts", it.ts)
+                    .put("visible", it.visible)
+                    .put("kind", it.kind)
             )
         }
         File(dir, "${s.id}.json").writeText(
@@ -63,7 +65,16 @@ class SessionStore(ctx: Context) {
         val arr = o.optJSONArray("messages") ?: JSONArray()
         for (i in 0 until arr.length()) {
             val m = arr.getJSONObject(i)
-            msgs.add(ChatMessage(m.getString("role"), m.optString("content"), m.optString("reasoning"), m.optLong("ts")))
+            msgs.add(
+                ChatMessage(
+                    m.getString("role"),
+                    m.optString("content"),
+                    m.optString("reasoning"),
+                    m.optLong("ts"),
+                    m.optBoolean("visible", true),
+                    m.optString("kind", "text")
+                )
+            )
         }
         Session(o.getString("id"), o.optString("title"), o.optString("project"), msgs, o.optInt("rounds"))
     } catch (_: Exception) {

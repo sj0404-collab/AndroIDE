@@ -3,7 +3,7 @@ package dev.sadat.androide.ai
 import dev.sadat.androide.AndroApp
 import dev.sadat.androide.log.LogStore
 
-class ModelRouter(private val client: AiClient = AiClient()) {
+class ModelRouter(val client: AiClient = AiClient()) {
     data class Attempt(val provider: String, val model: String, val note: String)
 
     fun complete(
@@ -20,12 +20,8 @@ class ModelRouter(private val client: AiClient = AiClient()) {
             onTry(Attempt(prov, model, if (Catalog.isReasoning(model)) "reasoning" else "fast"))
             LogStore.add("route", "$prov/$model")
             try {
-                val r = try {
-                    client.stream(messages, prov, model, onDelta)
-                } catch (e: Exception) {
-                    LogStore.add("stream", "fallback non-stream: ${e.message}")
-                    client.complete(messages, prov, model)
-                }
+                val r = client.complete(messages, prov, model)
+                onDelta("")
                 keys.provider = prov
                 keys.model = model
                 return r
@@ -35,8 +31,9 @@ class ModelRouter(private val client: AiClient = AiClient()) {
             } catch (e: Exception) {
                 last = e
                 val msg = e.message.orEmpty().lowercase()
+                if (msg.contains("canceled") || msg.contains("cancel")) throw e
                 if (keys.autoRotate && (msg.contains("429") || msg.contains("limit") || msg.contains("timeout") || msg.contains("failed to connect"))) {
-                    onTry(Attempt(prov, model, "fail->next: ${e.message?.take(80)}"))
+                    onTry(Attempt(prov, model, "fail->next"))
                     continue
                 }
                 throw e

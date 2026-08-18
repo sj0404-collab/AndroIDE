@@ -10,6 +10,13 @@ import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
 class AiClient {
+    @Volatile private var live: okhttp3.Call? = null
+
+    fun cancel() {
+        live?.cancel()
+        live = null
+    }
+
     private val http = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
         .readTimeout(180, TimeUnit.SECONDS)
@@ -60,7 +67,9 @@ class AiClient {
             .addHeader("HTTP-Referer", "https://androide.app")
             .addHeader("X-Title", "AndroIDE")
         if (key.isNotBlank()) req.addHeader("Authorization", "Bearer $key")
-        val resp = http.newCall(req.post(body.toString().toRequestBody(jsonType)).build()).execute()
+        val call = http.newCall(req.post(body.toString().toRequestBody(jsonType)).build())
+        live = call
+        val resp = try { call.execute() } finally { if (live === call) live = null }
         val text = resp.body?.string().orEmpty()
         if (isLimit(resp.code, text)) throw RateLimitException(resp.code, "${spec.id}/$model HTTP ${resp.code}: ${text.take(240)}")
         if (!resp.isSuccessful) throw RuntimeException("${spec.label} HTTP ${resp.code}: ${text.take(500)}")

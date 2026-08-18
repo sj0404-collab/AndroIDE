@@ -73,8 +73,9 @@
             android:paddingTop="2dp"
             android:paddingBottom="8dp"
             android:text="сессия 0м / 6ч 0м · осталось 6ч 0м"
-            android:textColor="@color/muted"
-            android:textSize="12sp" />
+            android:textColor="#C8C8D0"
+            android:textSize="14sp"
+            android:textStyle="bold" />
 
         <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#222228" />
 

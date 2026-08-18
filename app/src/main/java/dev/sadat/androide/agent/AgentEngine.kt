@@ -24,6 +24,12 @@ class AgentEngine(
 ) {
     val stop = AtomicBoolean(false)
 
+    fun requestStop() {
+        stop.set(true)
+        router.client.cancel()
+        Shell.kill()
+    }
+
     init {
         plugins.installExample()
     }
@@ -82,55 +88,62 @@ Do not stop after one file. Implement, run bash, read output, fix, update todo.
         """.trimIndent()
     }
 
+    private fun stripFences(raw: String): String =
+        raw.replace(Regex("```[\\s\\S]*?```"), "")
+            .replace(Regex("```(write|read|bash|cmd|sh|todo|delete|move|fetch|github|plugin|local|template|image|halt)[^\\n]*"), "")
+            .trim()
+
     fun runAutonomous(userText: String, onEvent: (AgentEvent) -> Unit): String {
         stop.set(false)
         val keys = AndroApp.instance.keys
         val s = sessions.current
-        if (s.messages.none { it.role == "system" }) s.messages.add(ChatMessage("system", systemPrompt()))
-        s.messages.add(ChatMessage("user", userText))
+        if (s.messages.none { it.role == "system" }) s.messages.add(ChatMessage("system", systemPrompt(), visible = false))
+        s.messages.add(ChatMessage("user", userText, visible = true))
         sessions.save(s)
         val all = StringBuilder()
         var idle = 0
         while (!stop.get() && s.rounds < keys.maxRounds) {
             s.rounds += 1
             if (s.title == "New session") s.title = userText.take(48)
-            onEvent(AgentEvent("round", "round ${s.rounds}/${keys.maxRounds}"))
+            onEvent(AgentEvent("round", "раунд ${s.rounds}/${keys.maxRounds}"))
             LogStore.add("round", "${s.rounds}/${keys.maxRounds}")
-            val streamBuf = StringBuilder()
-            val result = router.complete(s.messages, { att ->
-                onEvent(AgentEvent("route", "${att.provider}/${att.model} (${att.note})"))
-            }, { delta ->
-                streamBuf.append(delta)
-                onEvent(AgentEvent("stream", delta))
-            })
-            if (result.reasoning.isNotBlank()) onEvent(AgentEvent("think", result.reasoning))
-            val text = result.text.ifBlank { streamBuf.toString() }
-            s.messages.add(ChatMessage("assistant", text, result.reasoning))
+            onEvent(AgentEvent("think", "думает…"))
+            val t0 = System.currentTimeMillis()
+            val result = try {
+                router.complete(s.messages.filter { it.role != "tool" }, { att ->
+                    onEvent(AgentEvent("route", "${att.provider}/${att.model}"))
+                })
+            } catch (e: Exception) {
+                if (stop.get() || e.message.orEmpty().contains("cancel", true)) {
+                    onEvent(AgentEvent("status", "остановлено"))
+                    break
+                }
+                throw e
+            }
+            val thinkMs = System.currentTimeMillis() - t0
+            if (result.reasoning.isNotBlank()) {
+                onEvent(AgentEvent("think", "Thought ${thinkMs / 1000}s: ${result.reasoning.take(400)}"))
+            } else {
+                onEvent(AgentEvent("think", "Thought ${thinkMs / 1000}s"))
+            }
+            val text = result.text
+            val speech = stripFences(text)
+            s.messages.add(ChatMessage("assistant", text, result.reasoning, visible = speech.isNotBlank(), kind = "assistant"))
+            if (speech.isNotBlank()) onEvent(AgentEvent("say", speech))
             val applied = applyActions(text, onEvent)
             sessions.save(s)
-            all.append("\n\n--- round ${s.rounds} ---\n").append(text)
-            if (applied.isNotBlank()) all.append("\n").append(applied)
-            val halt = text.contains("```halt")
-            if (halt) {
-                onEvent(AgentEvent("status", "agent halted"))
+            all.append(applied)
+            if (stop.get() || text.contains("```halt")) {
+                onEvent(AgentEvent("status", "стоп"))
                 break
             }
             if (applied.isBlank()) idle++ else idle = 0
-            if (idle >= 2) {
-                s.messages.add(
-                    ChatMessage(
-                        "user",
-                        "Continue. Propose 3 concrete improvements and implement the first two now. Update todo. Do not halt unless the project runs. Current todo:\n${TodoStore.render()}\nFiles:\n${AndroApp.instance.workspace.tree()}"
-                    )
-                )
+            val nudge = if (idle >= 2) {
+                "Continue with TOOLS only: write/bash/todo. Implement next unfinished todo. No chatter. Files:\n${AndroApp.instance.workspace.tree()}\n${TodoStore.render()}"
             } else {
-                s.messages.add(
-                    ChatMessage(
-                        "user",
-                        "Keep going. Fix anything broken. Implement next todo. Do not write stubs. Files:\n${AndroApp.instance.workspace.tree()}\n${TodoStore.render()}"
-                    )
-                )
+                "Next tool now. Update todo. Files:\n${AndroApp.instance.workspace.tree()}\n${TodoStore.render()}"
             }
+            s.messages.add(ChatMessage("user", nudge, visible = false, kind = "nudge"))
         }
         sessions.save(s)
         return all.toString()
@@ -152,7 +165,7 @@ Do not stop after one file. Implement, run bash, read output, fix, update todo.
         }
         Regex("```write\\s+([^\\n]+)\\n([\\s\\S]*?)```").findAll(reply).forEach { m ->
             ws.write(m.groupValues[1].trim(), m.groupValues[2])
-            note("write", "WRITE ${m.groupValues[1].trim()} (${m.groupValues[2].length} chars)")
+            note("write", "Edit ${m.groupValues[1].trim()}")
         }
         Regex("```delete\\s+([^\\n`]+)").findAll(reply).forEach { m ->
             ws.delete(m.groupValues[1].trim())
@@ -161,8 +174,8 @@ Do not stop after one file. Implement, run bash, read output, fix, update todo.
         Regex("```read\\s+([^\\n`]+)").findAll(reply).forEach { m ->
             val path = m.groupValues[1].trim()
             val content = ws.read(path)
-            s.messages.add(ChatMessage("user", "FILE $path:\n${content.take(16000)}"))
-            note("read", "READ $path (${content.length})")
+            s.messages.add(ChatMessage("user", "FILE $path:\n${content.take(16000)}", visible = false, kind = "tool"))
+            note("read", "Opened $path")
         }
         Regex("```move\\s+(.+?)\\s*->\\s*([^\\n`]+)").findAll(reply).forEach { m ->
             val ok = ws.move(m.groupValues[1].trim(), m.groupValues[2].trim())
@@ -171,8 +184,8 @@ Do not stop after one file. Implement, run bash, read output, fix, update todo.
         Regex("```(?:bash|cmd|sh)\\n([\\s\\S]*?)```").findAll(reply).forEach { m ->
             val cmd = m.groupValues[1].trim()
             val out = Shell.run(cmd)
-            s.messages.add(ChatMessage("user", "SHELL $cmd\n$out"))
-            note("term", out.take(2000))
+            s.messages.add(ChatMessage("user", "SHELL $cmd\n$out", visible = false, kind = "tool"))
+            note("term", "used Bash · $cmd")
         }
         Regex("```template\\s+([^\\n`]+)").findAll(reply).forEach { m ->
             note("tmpl", Templates.apply(m.groupValues[1].trim()))
@@ -186,13 +199,13 @@ Do not stop after one file. Implement, run bash, read output, fix, update todo.
         Regex("```fetch\\s+(https?://[^\\s`]+)").findAll(reply).forEach { m ->
             val url = m.groupValues[1].trim()
             val text = WebFetch.pageText(url)
-            s.messages.add(ChatMessage("user", "WEB $url:\n$text"))
-            note("web", "FETCH $url (${text.length})")
+            s.messages.add(ChatMessage("user", "WEB $url:\n$text", visible = false, kind = "tool"))
+            note("web", "Fetched $url")
         }
         Regex("```github\\s+list\\s*```").findAll(reply).forEach {
             val repos = gh.listRepos().joinToString("\n") { r -> r.fullName }
-            s.messages.add(ChatMessage("user", "REPOS:\n$repos"))
-            note("github", repos.take(800))
+            s.messages.add(ChatMessage("user", "REPOS:\n$repos", visible = false, kind = "tool"))
+            note("github", "GitHub repos ${repos.lineSequence().count()}")
         }
         Regex("```github\\s+clone\\s+([^\\n`]+)").findAll(reply).forEach { m ->
             gh.cloneRepo(m.groupValues[1].trim())

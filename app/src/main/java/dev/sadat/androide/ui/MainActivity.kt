@@ -79,7 +79,7 @@ class MainActivity : AppCompatActivity() {
         })
 
         findViewById<View>(R.id.btnTopStop).setOnClickListener {
-            agent.stop.set(true)
+            agent.requestStop()
             setStatus("стоп", "#E11D48")
         }
         findViewById<View>(R.id.sheetClose).setOnClickListener { closeSheet() }
@@ -127,6 +127,13 @@ class MainActivity : AppCompatActivity() {
         content.addView(v)
     }
 
+    private fun addTool(parent: LinearLayout, icon: String, text: String) {
+        val row = inflater.inflate(R.layout.item_tool, parent, false)
+        row.findViewById<TextView>(R.id.icon).text = icon
+        row.findViewById<TextView>(R.id.label).text = text
+        parent.addView(row)
+    }
+
     private fun bubble(parent: LinearLayout, who: String, body: String, think: String = "", user: Boolean = false): View {
         val b = inflater.inflate(R.layout.bubble, parent, false)
         b.findViewById<TextView>(R.id.body).text = body
@@ -147,11 +154,12 @@ class MainActivity : AppCompatActivity() {
         val sessions = AndroApp.instance.sessions
         val keys = AndroApp.instance.keys
         box.removeAllViews()
-        val msgs = sessions.current.messages.filter { it.role != "system" }
+        val msgs = sessions.current.messages.filter { it.visible && it.role != "system" }
         if (msgs.isEmpty()) {
-            bubble(box, "AI", "Напиши — и я подскажу точнее.")
+            bubble(box, "AI", "Напиши задачу. Инструменты появятся карточками.")
         } else {
             msgs.forEach { m ->
+                if (m.kind == "nudge" || m.content.startsWith("Keep going") || m.content.startsWith("Continue")) return@forEach
                 bubble(box, m.role, m.content, m.reasoning, user = m.role == "user")
             }
         }
