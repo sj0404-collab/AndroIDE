@@ -36,7 +36,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { viewBinding = false }
+    buildFeatures {
+        viewBinding = false
+        buildConfig = true
+    }
 }
 
 dependencies {
