@@ -1,13 +1,15 @@
 package dev.sadat.androide.ai
 
 import dev.sadat.androide.AndroApp
+import dev.sadat.androide.log.LogStore
 
 class ModelRouter(private val client: AiClient = AiClient()) {
     data class Attempt(val provider: String, val model: String, val note: String)
 
     fun complete(
         messages: List<ChatMessage>,
-        onTry: (Attempt) -> Unit
+        onTry: (Attempt) -> Unit,
+        onDelta: (String) -> Unit = {}
     ): CompletionResult {
         val keys = AndroApp.instance.keys
         val chain = LinkedHashSet<Pair<String, String>>()
@@ -16,8 +18,14 @@ class ModelRouter(private val client: AiClient = AiClient()) {
         var last: Exception? = null
         for ((prov, model) in chain) {
             onTry(Attempt(prov, model, if (Catalog.isReasoning(model)) "reasoning" else "fast"))
+            LogStore.add("route", "$prov/$model")
             try {
-                val r = client.complete(messages, prov, model)
+                val r = try {
+                    client.stream(messages, prov, model, onDelta)
+                } catch (e: Exception) {
+                    LogStore.add("stream", "fallback non-stream: ${e.message}")
+                    client.complete(messages, prov, model)
+                }
                 keys.provider = prov
                 keys.model = model
                 return r
@@ -28,7 +36,7 @@ class ModelRouter(private val client: AiClient = AiClient()) {
                 last = e
                 val msg = e.message.orEmpty().lowercase()
                 if (keys.autoRotate && (msg.contains("429") || msg.contains("limit") || msg.contains("timeout") || msg.contains("failed to connect"))) {
-                    onTry(Attempt(prov, model, "fail→next: ${e.message?.take(80)}"))
+                    onTry(Attempt(prov, model, "fail->next: ${e.message?.take(80)}"))
                     continue
                 }
                 throw e

@@ -31,8 +31,8 @@ class KeyStore(ctx: Context) {
         set(v) { p.edit().putString(pref("localBase"), v.trim()).apply() }
 
     var maxRounds: Int
-        get() = p.getInt(pref("maxRounds"), 8)
-        set(v) { p.edit().putInt(pref("maxRounds"), v.coerceIn(1, 32)).apply() }
+        get() = p.getInt(pref("maxRounds"), 128)
+        set(v) { p.edit().putInt(pref("maxRounds"), v.coerceIn(1, 500)).apply() }
 
     var autoRotate: Boolean
         get() = p.getBoolean(pref("autoRotate"), true)

@@ -68,6 +68,67 @@ class AiClient {
         return parsed.copy(provider = spec.id, model = model, httpCode = resp.code)
     }
 
+    fun stream(
+        messages: List<ChatMessage>,
+        providerId: String,
+        modelName: String,
+        onDelta: (String) -> Unit
+    ): CompletionResult {
+        val spec = Catalog.byId(providerId)
+        if (spec.id == "gemini" || spec.id == "glean") return complete(messages, providerId, modelName)
+        var url = if (spec.id == "local") AndroApp.instance.keys.localBase else spec.baseUrl
+        var key = AndroApp.instance.keys.getKey(spec.id)
+        if (key.contains("|") && spec.id == "openai") {
+            val parts = key.split("|", limit = 2)
+            url = parts[0].ifBlank { url }
+            key = parts.getOrElse(1) { "" }
+        }
+        val model = modelName.ifBlank { spec.defaultModel }
+        val body = JSONObject()
+            .put("model", model)
+            .put("stream", true)
+            .put("temperature", 0.2)
+            .put("messages", JSONArray().apply {
+                messages.forEach { put(JSONObject().put("role", it.role).put("content", it.content)) }
+            })
+        val req = Request.Builder().url(url)
+            .addHeader("Content-Type", "application/json")
+            .addHeader("HTTP-Referer", "https://androide.app")
+            .addHeader("X-Title", "AndroIDE")
+        if (key.isNotBlank()) req.addHeader("Authorization", "Bearer $key")
+        val resp = http.newCall(req.post(body.toString().toRequestBody(jsonType)).build()).execute()
+        if (isLimit(resp.code, "")) throw RateLimitException(resp.code, "stream ${resp.code}")
+        if (!resp.isSuccessful) {
+            val err = resp.body?.string().orEmpty()
+            if (resp.code == 400 || err.contains("stream")) return complete(messages, providerId, modelName)
+            throw RuntimeException("stream HTTP ${resp.code}: ${err.take(300)}")
+        }
+        val acc = StringBuilder()
+        val reason = StringBuilder()
+        resp.body!!.charStream().buffered().use { r ->
+            while (true) {
+                val line = r.readLine() ?: break
+                if (!line.startsWith("data:")) continue
+                val data = line.removePrefix("data:").trim()
+                if (data == "[DONE]") break
+                try {
+                    val o = JSONObject(data)
+                    val ch = o.optJSONArray("choices")?.optJSONObject(0) ?: continue
+                    val d = ch.optJSONObject("delta") ?: continue
+                    val c = d.optString("content")
+                    val rs = d.optString("reasoning_content")
+                    if (rs.isNotBlank()) reason.append(rs)
+                    if (c.isNotBlank()) {
+                        acc.append(c)
+                        onDelta(c)
+                    }
+                } catch (_: Exception) { }
+            }
+        }
+        if (acc.isBlank()) return complete(messages, providerId, modelName)
+        return CompletionResult(acc.toString(), reason.toString(), model, spec.id, resp.code)
+    }
+
     private fun isLimit(code: Int, body: String): Boolean {
         if (code == 429 || code == 402) return true
         val b = body.lowercase()

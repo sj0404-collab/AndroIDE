@@ -12,6 +12,7 @@ import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ListView
+import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
@@ -23,11 +24,14 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 import dev.sadat.androide.AndroApp
 import dev.sadat.androide.R
 import dev.sadat.androide.agent.AgentEngine
+import dev.sadat.androide.agent.TodoStore
 import dev.sadat.androide.ai.AiClient
 import dev.sadat.androide.ai.Catalog
 import dev.sadat.androide.github.GitHubClient
 import dev.sadat.androide.local.LocalModels
+import dev.sadat.androide.log.LogStore
 import dev.sadat.androide.project.Templates
+import org.json.JSONObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -39,22 +43,36 @@ class MainActivity : AppCompatActivity() {
     private val agent by lazy { AgentEngine(AndroApp.instance.sessions) }
     private val ai = AiClient()
     private val gh by lazy { GitHubClient(AndroApp.instance.workspace) }
+    private var streamBubble: TextView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         content = findViewById(R.id.content)
-        showAgent()
+        LogStore.listen { line ->
+            runOnUiThread {
+                findViewById<TextView>(R.id.globalInd)?.text =
+                    "${line.kind}: ${line.text.take(90)}"
+            }
+        }
+        showGithub()
         findViewById<BottomNavigationView>(R.id.nav).setOnItemSelectedListener {
+            AndroApp.instance.sessions.save()
             when (it.itemId) {
-                R.id.tab_agent -> showAgent()
-                R.id.tab_files -> showFiles()
                 R.id.tab_github -> showGithub()
-                R.id.tab_run -> showRun()
+                R.id.tab_dev -> showFiles()
+                R.id.tab_ai -> showAgent()
+                R.id.tab_preview -> showRun()
                 R.id.tab_settings -> showSettings()
+                R.id.tab_logs -> showLogs()
             }
             true
         }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        AndroApp.instance.sessions.save()
     }
 
     private fun show(v: View) {
@@ -62,7 +80,7 @@ class MainActivity : AppCompatActivity() {
         content.addView(v)
     }
 
-    private fun bubble(parent: LinearLayout, who: String, body: String, think: String = "") {
+    private fun bubble(parent: LinearLayout, who: String, body: String, think: String = ""): View {
         val b = inflater.inflate(R.layout.bubble, parent, false)
         b.findViewById<TextView>(R.id.who).text = who
         b.findViewById<TextView>(R.id.body).text = body
@@ -72,6 +90,7 @@ class MainActivity : AppCompatActivity() {
             t.text = "thinking\n$think"
         }
         parent.addView(b)
+        return b
     }
 
     private fun showAgent() {
@@ -82,17 +101,23 @@ class MainActivity : AppCompatActivity() {
         val rounds = v.findViewById<TextView>(R.id.roundLabel)
         val input = v.findViewById<EditText>(R.id.agentInput)
         val spin = v.findViewById<Spinner>(R.id.sessionSpin)
+        val todo = v.findViewById<TextView>(R.id.todoView)
+        val ind = v.findViewById<TextView>(R.id.indicator)
+        val busy = v.findViewById<ProgressBar>(R.id.busy)
+        val term = v.findViewById<TextView>(R.id.termMini)
         val sessions = AndroApp.instance.sessions
         val keys = AndroApp.instance.keys
 
         fun paintSession() {
             val s = sessions.current
             box.removeAllViews()
+            streamBubble = null
             s.messages.filter { it.role != "system" }.forEach { m ->
                 bubble(box, m.role.uppercase(), m.content, m.reasoning)
             }
             rounds.text = "${s.rounds}/${keys.maxRounds}"
-            meta.text = "acc=${keys.account}  ${keys.provider}/${keys.model}  proj=${AndroApp.instance.workspace.currentProject.name}"
+            todo.text = TodoStore.render()
+            meta.text = "acc=${keys.account} ${keys.provider}/${keys.model} proj=${AndroApp.instance.workspace.currentProject.name} autosave=on"
             scroll.post { scroll.fullScroll(View.FOCUS_DOWN) }
         }
 
@@ -108,20 +133,26 @@ class MainActivity : AppCompatActivity() {
             val list = sessions.list()
             val i = spin.selectedItemPosition
             if (i in list.indices) {
+                sessions.save()
                 sessions.switchTo(list[i].id)
                 paintSession()
             }
         })
         v.findViewById<View>(R.id.btnNewSession).setOnClickListener {
+            sessions.save()
             sessions.create("New session", AndroApp.instance.workspace.currentProject.name)
             fillSessions()
             paintSession()
         }
+        v.findViewById<View>(R.id.btnStop).setOnClickListener {
+            agent.stop.set(true)
+            ind.text = "stop requested"
+            LogStore.add("status", "stop requested")
+        }
         v.findViewById<View>(R.id.btnTmpl).setOnClickListener {
             val kinds = arrayOf("2d", "3d", "react", "kotlin", "canvas")
             AlertDialog.Builder(this).setTitle("Template").setItems(kinds) { _, i ->
-                Templates.apply(kinds[i])
-                toast("template ${kinds[i]}")
+                Templates.apply(kinds[i]); toast("template ${kinds[i]}")
             }.show()
         }
         v.findViewById<View>(R.id.btnSend).setOnClickListener {
@@ -129,25 +160,46 @@ class MainActivity : AppCompatActivity() {
             if (text.isEmpty()) return@setOnClickListener
             input.setText("")
             bubble(box, "YOU", text)
+            busy.visibility = View.VISIBLE
+            ind.text = "running"
+            streamBubble = null
             lifecycleScope.launch {
                 try {
-                    val out = withContext(Dispatchers.IO) {
-                        agent.run(text) { ev ->
+                    withContext(Dispatchers.IO) {
+                        agent.runAutonomous(text) { ev ->
                             runOnUiThread {
-                                if (ev.kind == "think") bubble(box, "THINK", "", ev.text)
-                                else bubble(box, ev.kind.uppercase(), ev.text)
-                                rounds.text = "${sessions.current.rounds}/${keys.maxRounds}"
+                                when (ev.kind) {
+                                    "stream" -> {
+                                        if (streamBubble == null) {
+                                            val b = bubble(box, "AI*", "")
+                                            streamBubble = b.findViewById(R.id.body)
+                                        }
+                                        streamBubble?.append(ev.text)
+                                    }
+                                    "think" -> bubble(box, "THINK", "", ev.text)
+                                    "todo" -> todo.text = ev.text
+                                    "term", "pty" -> term.append(ev.text + "\n")
+                                    "round" -> rounds.text = ev.text.replace("round ", "")
+                                    else -> {
+                                        if (ev.kind != "stream") bubble(box, ev.kind.uppercase(), ev.text)
+                                    }
+                                }
+                                ind.text = ev.kind
                                 scroll.post { scroll.fullScroll(View.FOCUS_DOWN) }
                             }
                         }
                     }
-                    bubble(box, "AI", out)
+                    sessions.save()
+                    fillSessions()
+                    todo.text = TodoStore.render()
+                    ind.text = "idle"
                 } catch (e: Exception) {
                     bubble(box, "ERROR", e.message ?: "fail")
+                    LogStore.add("error", e.message ?: "fail")
+                    ind.text = "error"
                 }
+                busy.visibility = View.GONE
                 sessions.save()
-                fillSessions()
-                scroll.post { scroll.fullScroll(View.FOCUS_DOWN) }
             }
         }
         show(v)
@@ -167,42 +219,27 @@ class MainActivity : AppCompatActivity() {
             pSpin.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, projects())
             val i = projects().indexOf(ws.currentProject.name)
             if (i >= 0) pSpin.setSelection(i)
-            val files = ws.listFiles().map { it.relativeTo(ws.currentProject).path }
-            list.adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, files)
+            list.adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, ws.listFiles().map { it.relativeTo(ws.currentProject).path })
             proj.setText(ws.currentProject.name)
         }
         refresh()
         pSpin.setOnItemSelectedListener(simple {
             val name = pSpin.selectedItem?.toString() ?: return@simple
             ws.openOrCreate(name)
-            val files = ws.listFiles().map { it.relativeTo(ws.currentProject).path }
-            list.adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, files)
+            refresh()
         })
         list.setOnItemClickListener { _, _, i, _ ->
             val rel = list.adapter.getItem(i) as String
-            path.setText(rel)
-            dest.setText(rel)
+            path.setText(rel); dest.setText(rel)
             val f = ws.resolve(rel)
-            if (rel.endsWith(".png") || rel.endsWith(".jpg")) body.setText("(binary ${f.length()} bytes)")
-            else body.setText(ws.read(rel))
+            body.setText(if (rel.endsWith(".png") || rel.endsWith(".jpg")) "(binary ${f.length()})" else ws.read(rel))
         }
-        v.findViewById<View>(R.id.btnOpenProject).setOnClickListener {
-            ws.openOrCreate(proj.text.toString())
-            refresh()
-        }
+        v.findViewById<View>(R.id.btnOpenProject).setOnClickListener { ws.openOrCreate(proj.text.toString()); refresh() }
         v.findViewById<View>(R.id.btnRefreshFiles).setOnClickListener { refresh() }
-        v.findViewById<View>(R.id.btnSaveFile).setOnClickListener {
-            ws.write(path.text.toString(), body.text.toString()); refresh(); toast("saved")
-        }
-        v.findViewById<View>(R.id.btnMoveFile).setOnClickListener {
-            ws.move(path.text.toString(), dest.text.toString()); refresh(); toast("moved")
-        }
-        v.findViewById<View>(R.id.btnCopyFile).setOnClickListener {
-            ws.copy(path.text.toString(), dest.text.toString()); refresh(); toast("copied")
-        }
-        v.findViewById<View>(R.id.btnDelFile).setOnClickListener {
-            ws.delete(path.text.toString()); body.setText(""); refresh()
-        }
+        v.findViewById<View>(R.id.btnSaveFile).setOnClickListener { ws.write(path.text.toString(), body.text.toString()); refresh(); toast("saved") }
+        v.findViewById<View>(R.id.btnMoveFile).setOnClickListener { ws.move(path.text.toString(), dest.text.toString()); refresh() }
+        v.findViewById<View>(R.id.btnCopyFile).setOnClickListener { ws.copy(path.text.toString(), dest.text.toString()); refresh() }
+        v.findViewById<View>(R.id.btnDelFile).setOnClickListener { ws.delete(path.text.toString()); body.setText(""); refresh() }
         show(v)
     }
 
@@ -219,17 +256,17 @@ class MainActivity : AppCompatActivity() {
                 try {
                     val r = withContext(Dispatchers.IO) { block() }
                     log.text = r
+                    LogStore.add("github", r.take(300))
                 } catch (e: Exception) {
                     log.text = e.message
+                    LogStore.add("github-error", e.message ?: "")
                 }
             }
         }
         v.findViewById<View>(R.id.btnSaveToken).setOnClickListener {
             AndroApp.instance.keys.githubToken = token.text.toString()
             go {
-                val w = gh.whoami()
-                runOnUiThread { who.text = w }
-                w
+                val w = gh.whoami(); runOnUiThread { who.text = w }; w
             }
         }
         v.findViewById<View>(R.id.btnListRepos).setOnClickListener {
@@ -240,21 +277,26 @@ class MainActivity : AppCompatActivity() {
                 "repos ${list.size}"
             }
         }
-        repos.setOnLongClickListener {
-            val line = repos.text.lineSequence().firstOrNull() ?: return@setOnLongClickListener true
-            repo.setText(line.substringBefore(" "))
-            true
-        }
         v.findViewById<View>(R.id.btnClone).setOnClickListener { go { gh.cloneRepo(repo.text.toString()).absolutePath } }
         v.findViewById<View>(R.id.btnBind).setOnClickListener { gh.bindRemote(repo.text.toString()); log.text = "bound" }
         v.findViewById<View>(R.id.btnPush).setOnClickListener {
             go { gh.commitAndPush(v.findViewById<EditText>(R.id.ghCommitMsg).text.toString()) }
         }
         v.findViewById<View>(R.id.btnRelease).setOnClickListener {
-            val tag = v.findViewById<EditText>(R.id.ghTag).text.toString().ifBlank { "v2.1.0" }
-            go { gh.createRelease(tag, "AndroIDE $tag", "signed agent release") }
+            val tag = v.findViewById<EditText>(R.id.ghTag).text.toString().ifBlank { "v2.2.0" }
+            go { gh.createRelease(tag, "AndroIDE $tag", "release") }
         }
         v.findViewById<View>(R.id.btnWorkflow).setOnClickListener { go { gh.dispatchWorkflow("android.yml") } }
+        v.findViewById<View>(R.id.btnPty).setOnClickListener {
+            val cmd = v.findViewById<EditText>(R.id.ptyCmd).text.toString()
+            go {
+                val d = gh.dispatchWorkflow("pty.yml", mapOf("command" to cmd, "chat" to "androide-ui"))
+                Thread.sleep(5000)
+                val run = gh.latestRun("pty")
+                val logs = if (run != null) gh.runLogs(run.getLong("id")) else "waiting for run"
+                "$d\n$logs"
+            }
+        }
         v.findViewById<View>(R.id.btnCreateRepo).setOnClickListener {
             go {
                 val r = gh.createRepo(v.findViewById<EditText>(R.id.ghNewRepo).text.toString())
@@ -278,14 +320,21 @@ class MainActivity : AppCompatActivity() {
         web.webChromeClient = WebChromeClient()
         v.findViewById<View>(R.id.btnRunHtml).setOnClickListener {
             val ws = AndroApp.instance.workspace
-            val html = listOf("index.html", "game.html", "play.html")
-                .map { File(ws.currentProject, it) }.firstOrNull { it.exists() }
-            if (html == null) hint.text = "Нет index.html — шаблон 2D/3D или попроси агента"
+            val html = listOf("index.html", "game.html", "play.html").map { File(ws.currentProject, it) }.firstOrNull { it.exists() }
+            if (html == null) hint.text = "No index.html"
             else {
                 hint.text = html.absolutePath
                 web.loadUrl("file://${html.absolutePath}")
             }
         }
+        show(v)
+    }
+
+    private fun showLogs() {
+        val v = inflater.inflate(R.layout.tab_logs, content, false)
+        val tv = v.findViewById<TextView>(R.id.logView)
+        tv.text = LogStore.dump()
+        v.findViewById<View>(R.id.btnRefreshLogs).setOnClickListener { tv.text = LogStore.dump() }
         show(v)
     }
 
@@ -313,16 +362,15 @@ class MainActivity : AppCompatActivity() {
         rounds.setText(keys.maxRounds.toString())
         rot.isChecked = keys.autoRotate
         reason.isChecked = keys.showReasoning
-        val labels = Catalog.all.map { it.label }
-        pSpin.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, labels)
+        pSpin.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, Catalog.all.map { it.label })
         val idx = Catalog.all.indexOfFirst { it.id == keys.provider }.coerceAtLeast(0)
         pSpin.setSelection(idx)
+        fun spec() = Catalog.all[pSpin.selectedItemPosition]
         fun bindModels(models: List<String>) {
             mSpin.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, models)
             val mi = models.indexOf(keys.model)
             if (mi >= 0) mSpin.setSelection(mi)
         }
-        fun spec() = Catalog.all[pSpin.selectedItemPosition]
         bindModels(spec().models)
         hint.text = spec().keyHint
         key.setText(keys.getKey(spec().id))
@@ -333,10 +381,8 @@ class MainActivity : AppCompatActivity() {
         })
         v.findViewById<View>(R.id.btnAddAccount).setOnClickListener {
             val n = v.findViewById<EditText>(R.id.newAccount).text.toString()
-            if (n.isNotBlank()) keys.addAccount(n)
-            else keys.account = aSpin.selectedItem?.toString() ?: "default"
+            if (n.isNotBlank()) keys.addAccount(n) else keys.account = aSpin.selectedItem?.toString() ?: "default"
             accFill()
-            slog.text = "account ${keys.account}"
         }
         v.findViewById<View>(R.id.btnSaveKeys).setOnClickListener {
             val s = spec()
@@ -344,7 +390,7 @@ class MainActivity : AppCompatActivity() {
             keys.model = mSpin.selectedItem?.toString() ?: s.defaultModel
             keys.setKey(s.id, key.text.toString())
             keys.localBase = local.text.toString()
-            keys.maxRounds = rounds.text.toString().toIntOrNull() ?: 8
+            keys.maxRounds = rounds.text.toString().toIntOrNull() ?: 128
             keys.autoRotate = rot.isChecked
             keys.showReasoning = reason.isChecked
             slog.text = "saved ${keys.snapshot()}"
@@ -353,17 +399,14 @@ class MainActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 val models = withContext(Dispatchers.IO) { ai.fetchModels(spec()) }
                 bindModels(models)
-                slog.text = "${models.size} models"
             }
         }
         v.findViewById<View>(R.id.btnDlTiny).setOnClickListener {
             lifecycleScope.launch {
-                slog.text = "downloading…"
-                try {
-                    val f = withContext(Dispatchers.IO) { LocalModels.download("tinyllama-1.1b") { } }
-                    slog.text = "ok ${f.name} ${f.length()}"
+                slog.text = try {
+                    withContext(Dispatchers.IO) { LocalModels.download("tinyllama-1.1b") {} }.absolutePath
                 } catch (e: Exception) {
-                    slog.text = e.message
+                    e.message
                 }
             }
         }

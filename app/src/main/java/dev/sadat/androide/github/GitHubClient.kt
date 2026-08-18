@@ -172,18 +172,50 @@ class GitHubClient(private val ws: Workspace) {
         return o.optString("html_url")
     }
 
-    fun dispatchWorkflow(workflow: String = "android.yml"): String {
+    fun dispatchWorkflow(workflow: String = "android.yml", inputs: Map<String, String> = emptyMap()): String {
         val full = currentRemote()
         if (full.isBlank()) throw RuntimeException("Bind a remote first")
         val repo = JSONObject(api("/repos/$full"))
         val branch = repo.optString("default_branch", "main")
-        api(
-            "/repos/$full/actions/workflows/$workflow/dispatches",
-            "POST",
-            JSONObject().put("ref", branch).toString()
-        )
-        return "Dispatched $workflow on $full@$branch"
+        val body = JSONObject().put("ref", branch)
+        if (inputs.isNotEmpty()) {
+            val inn = JSONObject()
+            inputs.forEach { (k, v) -> inn.put(k, v) }
+            body.put("inputs", inn)
+        }
+        api("/repos/$full/actions/workflows/$workflow/dispatches", "POST", body.toString())
+        return "Dispatched $workflow on $full@$branch inputs=$inputs"
     }
+
+    fun latestRun(workflowHint: String = ""): JSONObject? {
+        val full = currentRemote()
+        val arr = JSONObject(api("/repos/$full/actions/runs?per_page=5")).optJSONArray("workflow_runs") ?: return null
+        if (arr.length() == 0) return null
+        if (workflowHint.isBlank()) return arr.getJSONObject(0)
+        for (i in 0 until arr.length()) {
+            val o = arr.getJSONObject(i)
+            if (o.optString("path").contains(workflowHint) || o.optString("name").contains(workflowHint, true)) return o
+        }
+        return arr.getJSONObject(0)
+    }
+
+    fun runLogs(runId: Long): String {
+        val full = currentRemote()
+        val jobs = JSONObject(api("/repos/$full/actions/runs/$runId/jobs")).optJSONArray("jobs") ?: JSONArray()
+        val sb = StringBuilder()
+        for (i in 0 until jobs.length()) {
+            val j = jobs.getJSONObject(i)
+            sb.appendLine("JOB ${j.optString("name")} ${j.optString("status")} ${j.optString("conclusion")}")
+            val steps = j.optJSONArray("steps") ?: JSONArray()
+            for (s in 0 until steps.length()) {
+                val st = steps.getJSONObject(s)
+                sb.appendLine("  - ${st.optString("name")}: ${st.optString("conclusion")}")
+            }
+        }
+        return sb.toString()
+    }
+
+    fun apiGet(path: String): String = api(path)
 
     private fun String.encodeUrl(): String = java.net.URLEncoder.encode(this, "UTF-8").replace("+", "%20")
 }

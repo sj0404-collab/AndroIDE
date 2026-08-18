@@ -25,6 +25,8 @@
         <EditText android:id="@+id/ghTag" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="v2.0.0" android:textColor="@color/text" />
         <Button android:id="@+id/btnRelease" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Create GitHub Release" />
         <Button android:id="@+id/btnWorkflow" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Dispatch android.yml workflow" />
+        <EditText android:id="@+id/ptyCmd" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="PTY command on GitHub runner" android:text="uname -a &amp;&amp; node -v" android:textColor="@color/text" android:textColorHint="@color/muted" />
+        <Button android:id="@+id/btnPty" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Start GitHub PTY runner (node-pty / script)" />
 
         <EditText android:id="@+id/ghNewRepo" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="new repo name" android:textColor="@color/text" />
         <Button android:id="@+id/btnCreateRepo" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Create repo on GitHub" />

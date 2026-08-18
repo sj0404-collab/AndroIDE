@@ -1,0 +1,40 @@
+name: PTY runner
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: shell command
+        required: true
+        default: "uname -a && node -v && pwd"
+      chat:
+        description: extra prompt text
+        required: false
+        default: ""
+
+jobs:
+  pty:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install node-pty
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3 make g++
+          npm init -y
+          npm install node-pty --no-fund --no-audit || echo "node-pty compile failed, will use script(1)"
+      - name: Run in PTY
+        env:
+          CMD: ${{ inputs.command }}
+          CHAT: ${{ inputs.chat }}
+        run: |
+          set -e
+          if [ -f node_modules/node-pty/package.json ]; then
+            node .github/scripts/pty-chat.js
+          else
+            script -q -e -c "bash -lc \"$CMD\"" /tmp/pty.log
+            cat /tmp/pty.log
+          fi
